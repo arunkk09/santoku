@@ -1,0 +1,3118 @@
+
+R version 3.1.1 (2014-07-10) -- "Sock it to Me"
+Copyright (C) 2014 The R Foundation for Statistical Computing
+Platform: aarch64-unknown-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> source("Classes.R")
+> source("LogRegDense.R")
+> library(data.table)
+> library(Matrix)
+> options(width=190)
+> options(scipen=999)
+> 
+> mns = 5e5 #5e4
+> mnr = 1e4 #5e2
+> mds = 4
+> mdr = 40 #400
+> 
+> varyns = c(1e4, 5e4, 1e5, 5e5, 1e6, 5e6)
+> varydr = c(2, 4, 20, 40, 200, 400)
+> 
+> #params is a 2x6x4 matrix of param values with cols being ns,nr,ds,dr; 6 combos each for varying ns and dr
+> params = rbind(cbind(varyns, rep(mnr, 6), rep(mds, 6), rep(mdr, 6)), cbind(rep(mns, 6), rep(mnr, 6), rep(mds, 6), varydr))
+> 
+> for (i in 1:nrow(params)) {
++ 
++ ns = params[i, 1]; nr = params[i, 2]; ds = params[i, 3]; dr = params[i, 4]; 
++ cat("GEN_DATA:", ns, nr, ds, dr, "\n")
++ 
++ #generate synth data R, and S incl Y and FK
++ tinyr = as.data.frame(matrix(rep(1.1, nr * dr), nrow=nr, ncol=dr))
++ tinys = as.data.frame(matrix(rep(1.1, ns * ds), nrow=ns, ncol=ds))
++ yvec = sample(c(1,-1), ns, replace=TRUE)
++ fkvec = sample(seq(1, nr), ns, replace=TRUE)
++ tinys = cbind(yvec, tinys, fkvec)
++ names(tinys) = c("y", "xs1", "xs2", "xs3", "xs4", "fk")
++ #names(tinys) = c("y", "xs1", "fk")
++ 
++ tinyrp = cbind(seq(1, nr), tinyr)
++ names(tinyrp)[1] = "fk"
++ pt = proc.time(); tinyt = merge(tinys, tinyrp); tinyt = tinyt[,-1]; cat("TIME_J:", proc.time() - pt, "\n")
++ 
++ singtrain = SingData(Target=as.data.frame(tinyt[,1]), TargetName="y", SingTable=tinyt[,-1], FDs=list())
++ kfkds = list(KFKD(EntCol="fk", AttCol="fk"))
++ multtrain = MultData(Target=as.data.frame(tinys[,1]), EntTable=tinys[,-1], AttTables=list(tinyr), KFKDs=kfkds)
++ 
++ #time slss and flfs thrice
++ for (tt in 1:3) {
++ 	pt = proc.time(); mylogregsing = LogRegDenseSingLearn(singtrain, lambda = 1000, alpha = 0.00001, eps = 0, maxiters = 20); cat("TIME_SL:", proc.time() - pt, "\n")
++ 	pt = proc.time(); tpredsing = LogRegDenseSingScore(mylogregsing, singtrain); cat("TIME_SS:", proc.time() - pt, "\n")
++ 
++ 	pt = proc.time(); mylogregmult = LogRegDenseMultLearn(multtrain, lambda = 1000, alpha = 0.00001, eps = 0, maxiters = 20); cat("TIME_FL:", proc.time() - pt, "\n")
++ 	pt = proc.time(); tpredmult = LogRegDenseMultScore(mylogregmult, multtrain); cat("TIME_FS:", proc.time() - pt, "\n")
++ }
++ 
++ }
+GEN_DATA: 10000 10000 4 40 
+TIME_J: 0.57 0 0.575 0 0 
+Iter: 1 prev loss: 6931.472 frac: 0 
+	Iter: 1 gnorm: 1246295 
+Iter: 2 prev loss: 6927.238 frac: 0.0006107598 
+	Iter: 2 gnorm: 127831.7 
+Iter: 3 prev loss: 6926.81 frac: 0.00006184178 
+	Iter: 3 gnorm: 14815.24 
+Iter: 4 prev loss: 6926.771 frac: 0.000005561557 
+	Iter: 4 gnorm: 4648.77 
+Iter: 5 prev loss: 6926.762 frac: 0.000001401071 
+	Iter: 5 gnorm: 2087.452 
+Iter: 6 prev loss: 6926.758 frac: 0.0000005231836 
+	Iter: 6 gnorm: 1130.984 
+Iter: 7 prev loss: 6926.756 frac: 0.0000002422026 
+	Iter: 7 gnorm: 688.1888 
+Iter: 8 prev loss: 6926.756 frac: 0.0000001285529 
+	Iter: 8 gnorm: 453.1657 
+Iter: 9 prev loss: 6926.755 frac: 0.00000007503303 
+	Iter: 9 gnorm: 315.9878 
+Iter: 10 prev loss: 6926.755 frac: 0.00000004697096 
+	Iter: 10 gnorm: 230.1134 
+Iter: 11 prev loss: 6926.754 frac: 0.00000003102887 
+	Iter: 11 gnorm: 173.3849 
+Iter: 12 prev loss: 6926.754 frac: 0.00000002139059 
+	Iter: 12 gnorm: 134.2774 
+Iter: 13 prev loss: 6926.754 frac: 0.00000001526614 
+	Iter: 13 gnorm: 106.3669 
+Iter: 14 prev loss: 6926.754 frac: 0.0000000112127 
+	Iter: 14 gnorm: 85.86711 
+Iter: 15 prev loss: 6926.754 frac: 0.000000008437261 
+	Iter: 15 gnorm: 70.44154 
+Iter: 16 prev loss: 6926.754 frac: 0.000000006481418 
+	Iter: 16 gnorm: 58.59176 
+Iter: 17 prev loss: 6926.754 frac: 0.000000005068695 
+	Iter: 17 gnorm: 49.3248 
+Iter: 18 prev loss: 6926.754 frac: 0.000000004026183 
+	Iter: 18 gnorm: 41.96383 
+Iter: 19 prev loss: 6926.754 frac: 0.000000003242298 
+	Iter: 19 gnorm: 36.03602 
+Iter: 20 prev loss: 6926.754 frac: 0.000000002643032 
+	Iter: 20 gnorm: 31.20382 
+TIME_SL: 1.3 0.06 1.359 0 0 
+TIME_SS: 0.06 0 0.06 0 0 
+Iter: 1 prev loss: 6931.472 frac: 0 
+	Iter: 1 gnorm: 1246295 
+Iter: 2 prev loss: 6927.238 frac: 0.0006107598 
+	Iter: 2 gnorm: 127831.7 
+Iter: 3 prev loss: 6926.81 frac: 0.00006184178 
+	Iter: 3 gnorm: 14815.24 
+Iter: 4 prev loss: 6926.771 frac: 0.000005561557 
+	Iter: 4 gnorm: 4648.77 
+Iter: 5 prev loss: 6926.762 frac: 0.000001401071 
+	Iter: 5 gnorm: 2087.452 
+Iter: 6 prev loss: 6926.758 frac: 0.0000005231836 
+	Iter: 6 gnorm: 1130.984 
+Iter: 7 prev loss: 6926.756 frac: 0.0000002422026 
+	Iter: 7 gnorm: 688.1888 
+Iter: 8 prev loss: 6926.756 frac: 0.0000001285529 
+	Iter: 8 gnorm: 453.1657 
+Iter: 9 prev loss: 6926.755 frac: 0.00000007503303 
+	Iter: 9 gnorm: 315.9878 
+Iter: 10 prev loss: 6926.755 frac: 0.00000004697096 
+	Iter: 10 gnorm: 230.1134 
+Iter: 11 prev loss: 6926.754 frac: 0.00000003102887 
+	Iter: 11 gnorm: 173.3849 
+Iter: 12 prev loss: 6926.754 frac: 0.00000002139059 
+	Iter: 12 gnorm: 134.2774 
+Iter: 13 prev loss: 6926.754 frac: 0.00000001526614 
+	Iter: 13 gnorm: 106.3669 
+Iter: 14 prev loss: 6926.754 frac: 0.0000000112127 
+	Iter: 14 gnorm: 85.86711 
+Iter: 15 prev loss: 6926.754 frac: 0.000000008437261 
+	Iter: 15 gnorm: 70.44154 
+Iter: 16 prev loss: 6926.754 frac: 0.000000006481418 
+	Iter: 16 gnorm: 58.59176 
+Iter: 17 prev loss: 6926.754 frac: 0.000000005068695 
+	Iter: 17 gnorm: 49.3248 
+Iter: 18 prev loss: 6926.754 frac: 0.000000004026183 
+	Iter: 18 gnorm: 41.96383 
+Iter: 19 prev loss: 6926.754 frac: 0.000000003242298 
+	Iter: 19 gnorm: 36.03602 
+Iter: 20 prev loss: 6926.754 frac: 0.000000002643032 
+	Iter: 20 gnorm: 31.20382 
+TIME_FL: 1.5 0.01 1.517 0 0 
+TIME_FS: 0.08 0 0.071 0 0 
+Iter: 1 prev loss: 6931.472 frac: 0 
+	Iter: 1 gnorm: 1246295 
+Iter: 2 prev loss: 6927.238 frac: 0.0006107598 
+	Iter: 2 gnorm: 127831.7 
+Iter: 3 prev loss: 6926.81 frac: 0.00006184178 
+	Iter: 3 gnorm: 14815.24 
+Iter: 4 prev loss: 6926.771 frac: 0.000005561557 
+	Iter: 4 gnorm: 4648.77 
+Iter: 5 prev loss: 6926.762 frac: 0.000001401071 
+	Iter: 5 gnorm: 2087.452 
+Iter: 6 prev loss: 6926.758 frac: 0.0000005231836 
+	Iter: 6 gnorm: 1130.984 
+Iter: 7 prev loss: 6926.756 frac: 0.0000002422026 
+	Iter: 7 gnorm: 688.1888 
+Iter: 8 prev loss: 6926.756 frac: 0.0000001285529 
+	Iter: 8 gnorm: 453.1657 
+Iter: 9 prev loss: 6926.755 frac: 0.00000007503303 
+	Iter: 9 gnorm: 315.9878 
+Iter: 10 prev loss: 6926.755 frac: 0.00000004697096 
+	Iter: 10 gnorm: 230.1134 
+Iter: 11 prev loss: 6926.754 frac: 0.00000003102887 
+	Iter: 11 gnorm: 173.3849 
+Iter: 12 prev loss: 6926.754 frac: 0.00000002139059 
+	Iter: 12 gnorm: 134.2774 
+Iter: 13 prev loss: 6926.754 frac: 0.00000001526614 
+	Iter: 13 gnorm: 106.3669 
+Iter: 14 prev loss: 6926.754 frac: 0.0000000112127 
+	Iter: 14 gnorm: 85.86711 
+Iter: 15 prev loss: 6926.754 frac: 0.000000008437261 
+	Iter: 15 gnorm: 70.44154 
+Iter: 16 prev loss: 6926.754 frac: 0.000000006481418 
+	Iter: 16 gnorm: 58.59176 
+Iter: 17 prev loss: 6926.754 frac: 0.000000005068695 
+	Iter: 17 gnorm: 49.3248 
+Iter: 18 prev loss: 6926.754 frac: 0.000000004026183 
+	Iter: 18 gnorm: 41.96383 
+Iter: 19 prev loss: 6926.754 frac: 0.000000003242298 
+	Iter: 19 gnorm: 36.03602 
+Iter: 20 prev loss: 6926.754 frac: 0.000000002643032 
+	Iter: 20 gnorm: 31.20382 
+TIME_SL: 0.58 0.01 0.599 0 0 
+TIME_SS: 0.06 0 0.059 0 0 
+Iter: 1 prev loss: 6931.472 frac: 0 
+	Iter: 1 gnorm: 1246295 
+Iter: 2 prev loss: 6927.238 frac: 0.0006107598 
+	Iter: 2 gnorm: 127831.7 
+Iter: 3 prev loss: 6926.81 frac: 0.00006184178 
+	Iter: 3 gnorm: 14815.24 
+Iter: 4 prev loss: 6926.771 frac: 0.000005561557 
+	Iter: 4 gnorm: 4648.77 
+Iter: 5 prev loss: 6926.762 frac: 0.000001401071 
+	Iter: 5 gnorm: 2087.452 
+Iter: 6 prev loss: 6926.758 frac: 0.0000005231836 
+	Iter: 6 gnorm: 1130.984 
+Iter: 7 prev loss: 6926.756 frac: 0.0000002422026 
+	Iter: 7 gnorm: 688.1888 
+Iter: 8 prev loss: 6926.756 frac: 0.0000001285529 
+	Iter: 8 gnorm: 453.1657 
+Iter: 9 prev loss: 6926.755 frac: 0.00000007503303 
+	Iter: 9 gnorm: 315.9878 
+Iter: 10 prev loss: 6926.755 frac: 0.00000004697096 
+	Iter: 10 gnorm: 230.1134 
+Iter: 11 prev loss: 6926.754 frac: 0.00000003102887 
+	Iter: 11 gnorm: 173.3849 
+Iter: 12 prev loss: 6926.754 frac: 0.00000002139059 
+	Iter: 12 gnorm: 134.2774 
+Iter: 13 prev loss: 6926.754 frac: 0.00000001526614 
+	Iter: 13 gnorm: 106.3669 
+Iter: 14 prev loss: 6926.754 frac: 0.0000000112127 
+	Iter: 14 gnorm: 85.86711 
+Iter: 15 prev loss: 6926.754 frac: 0.000000008437261 
+	Iter: 15 gnorm: 70.44154 
+Iter: 16 prev loss: 6926.754 frac: 0.000000006481418 
+	Iter: 16 gnorm: 58.59176 
+Iter: 17 prev loss: 6926.754 frac: 0.000000005068695 
+	Iter: 17 gnorm: 49.3248 
+Iter: 18 prev loss: 6926.754 frac: 0.000000004026183 
+	Iter: 18 gnorm: 41.96383 
+Iter: 19 prev loss: 6926.754 frac: 0.000000003242298 
+	Iter: 19 gnorm: 36.03602 
+Iter: 20 prev loss: 6926.754 frac: 0.000000002643032 
+	Iter: 20 gnorm: 31.20382 
+TIME_FL: 1.41 0 1.413 0 0 
+TIME_FS: 0.08 0 0.071 0 0 
+Iter: 1 prev loss: 6931.472 frac: 0 
+	Iter: 1 gnorm: 1246295 
+Iter: 2 prev loss: 6927.238 frac: 0.0006107598 
+	Iter: 2 gnorm: 127831.7 
+Iter: 3 prev loss: 6926.81 frac: 0.00006184178 
+	Iter: 3 gnorm: 14815.24 
+Iter: 4 prev loss: 6926.771 frac: 0.000005561557 
+	Iter: 4 gnorm: 4648.77 
+Iter: 5 prev loss: 6926.762 frac: 0.000001401071 
+	Iter: 5 gnorm: 2087.452 
+Iter: 6 prev loss: 6926.758 frac: 0.0000005231836 
+	Iter: 6 gnorm: 1130.984 
+Iter: 7 prev loss: 6926.756 frac: 0.0000002422026 
+	Iter: 7 gnorm: 688.1888 
+Iter: 8 prev loss: 6926.756 frac: 0.0000001285529 
+	Iter: 8 gnorm: 453.1657 
+Iter: 9 prev loss: 6926.755 frac: 0.00000007503303 
+	Iter: 9 gnorm: 315.9878 
+Iter: 10 prev loss: 6926.755 frac: 0.00000004697096 
+	Iter: 10 gnorm: 230.1134 
+Iter: 11 prev loss: 6926.754 frac: 0.00000003102887 
+	Iter: 11 gnorm: 173.3849 
+Iter: 12 prev loss: 6926.754 frac: 0.00000002139059 
+	Iter: 12 gnorm: 134.2774 
+Iter: 13 prev loss: 6926.754 frac: 0.00000001526614 
+	Iter: 13 gnorm: 106.3669 
+Iter: 14 prev loss: 6926.754 frac: 0.0000000112127 
+	Iter: 14 gnorm: 85.86711 
+Iter: 15 prev loss: 6926.754 frac: 0.000000008437261 
+	Iter: 15 gnorm: 70.44154 
+Iter: 16 prev loss: 6926.754 frac: 0.000000006481418 
+	Iter: 16 gnorm: 58.59176 
+Iter: 17 prev loss: 6926.754 frac: 0.000000005068695 
+	Iter: 17 gnorm: 49.3248 
+Iter: 18 prev loss: 6926.754 frac: 0.000000004026183 
+	Iter: 18 gnorm: 41.96383 
+Iter: 19 prev loss: 6926.754 frac: 0.000000003242298 
+	Iter: 19 gnorm: 36.03602 
+Iter: 20 prev loss: 6926.754 frac: 0.000000002643032 
+	Iter: 20 gnorm: 31.20382 
+TIME_SL: 0.35 0.02 0.372 0 0 
+TIME_SS: 0.05 0 0.055 0 0 
+Iter: 1 prev loss: 6931.472 frac: 0 
+	Iter: 1 gnorm: 1246295 
+Iter: 2 prev loss: 6927.238 frac: 0.0006107598 
+	Iter: 2 gnorm: 127831.7 
+Iter: 3 prev loss: 6926.81 frac: 0.00006184178 
+	Iter: 3 gnorm: 14815.24 
+Iter: 4 prev loss: 6926.771 frac: 0.000005561557 
+	Iter: 4 gnorm: 4648.77 
+Iter: 5 prev loss: 6926.762 frac: 0.000001401071 
+	Iter: 5 gnorm: 2087.452 
+Iter: 6 prev loss: 6926.758 frac: 0.0000005231836 
+	Iter: 6 gnorm: 1130.984 
+Iter: 7 prev loss: 6926.756 frac: 0.0000002422026 
+	Iter: 7 gnorm: 688.1888 
+Iter: 8 prev loss: 6926.756 frac: 0.0000001285529 
+	Iter: 8 gnorm: 453.1657 
+Iter: 9 prev loss: 6926.755 frac: 0.00000007503303 
+	Iter: 9 gnorm: 315.9878 
+Iter: 10 prev loss: 6926.755 frac: 0.00000004697096 
+	Iter: 10 gnorm: 230.1134 
+Iter: 11 prev loss: 6926.754 frac: 0.00000003102887 
+	Iter: 11 gnorm: 173.3849 
+Iter: 12 prev loss: 6926.754 frac: 0.00000002139059 
+	Iter: 12 gnorm: 134.2774 
+Iter: 13 prev loss: 6926.754 frac: 0.00000001526614 
+	Iter: 13 gnorm: 106.3669 
+Iter: 14 prev loss: 6926.754 frac: 0.0000000112127 
+	Iter: 14 gnorm: 85.86711 
+Iter: 15 prev loss: 6926.754 frac: 0.000000008437261 
+	Iter: 15 gnorm: 70.44154 
+Iter: 16 prev loss: 6926.754 frac: 0.000000006481418 
+	Iter: 16 gnorm: 58.59176 
+Iter: 17 prev loss: 6926.754 frac: 0.000000005068695 
+	Iter: 17 gnorm: 49.3248 
+Iter: 18 prev loss: 6926.754 frac: 0.000000004026183 
+	Iter: 18 gnorm: 41.96383 
+Iter: 19 prev loss: 6926.754 frac: 0.000000003242298 
+	Iter: 19 gnorm: 36.03602 
+Iter: 20 prev loss: 6926.754 frac: 0.000000002643032 
+	Iter: 20 gnorm: 31.20382 
+TIME_FL: 1.4 0.03 1.426 0 0 
+TIME_FS: 0.07 0 0.068 0 0 
+GEN_DATA: 50000 10000 4 40 
+TIME_J: 2.16 0.01 2.17 0 0 
+Iter: 1 prev loss: 34657.36 frac: 0 
+	Iter: 1 gnorm: 28163.96 
+Iter: 2 prev loss: 34658.01 frac: -0.0000188734 
+	Iter: 2 gnorm: 897447 
+Iter: 3 prev loss: 34660.98 frac: -0.00008560962 
+	Iter: 3 gnorm: 4840402 
+Iter: 4 prev loss: 34662.71 frac: -0.00005001808 
+	Iter: 4 gnorm: 7143837 
+Iter: 5 prev loss: 34659.69 frac: 0.00008730673 
+	Iter: 5 gnorm: 3122693 
+Iter: 6 prev loss: 34657.59 frac: 0.00006045782 
+	Iter: 6 gnorm: 337950.6 
+Iter: 7 prev loss: 34657.34 frac: 0.000007252486 
+	Iter: 7 gnorm: 3904.915 
+Iter: 8 prev loss: 34657.34 frac: 0.00000008456159 
+	Iter: 8 gnorm: 10.04341 
+Iter: 9 prev loss: 34657.34 frac: 0.0000000002117972 
+	Iter: 9 gnorm: 0.2881267 
+Iter: 10 prev loss: 34657.34 frac: 0.000000000005827092 
+	Iter: 10 gnorm: 0.01972797 
+Iter: 11 prev loss: 34657.34 frac: 0.0000000000003804111 
+	Iter: 11 gnorm: 0.002220592 
+Iter: 12 prev loss: 34657.34 frac: 0.00000000000004030846 
+	Iter: 12 gnorm: 0.0003480654 
+Iter: 13 prev loss: 34657.34 frac: 0.000000000000006298197 
+	Iter: 13 gnorm: 0.00006931357 
+Iter: 14 prev loss: 34657.34 frac: 0.000000000000001049699 
+	Iter: 14 gnorm: 0.00001656393 
+Iter: 15 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 15 gnorm: 0.000004571655 
+Iter: 16 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 16 gnorm: 0.000001418354 
+Iter: 17 prev loss: 34657.34 frac: -0.0000000000000002099399 
+	Iter: 17 gnorm: 0.000000484878 
+Iter: 18 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 18 gnorm: 0.0000001799018 
+Iter: 19 prev loss: 34657.34 frac: 0 
+	Iter: 19 gnorm: 0.00000007159217 
+Iter: 20 prev loss: 34657.34 frac: 0 
+	Iter: 20 gnorm: 0.00000003027229 
+TIME_SL: 3.16 0.06 3.224 0 0 
+TIME_SS: 0.26 0 0.257 0 0 
+Iter: 1 prev loss: 34657.36 frac: 0 
+	Iter: 1 gnorm: 28163.96 
+Iter: 2 prev loss: 34658.01 frac: -0.0000188734 
+	Iter: 2 gnorm: 897447 
+Iter: 3 prev loss: 34660.98 frac: -0.00008560962 
+	Iter: 3 gnorm: 4840402 
+Iter: 4 prev loss: 34662.71 frac: -0.00005001808 
+	Iter: 4 gnorm: 7143837 
+Iter: 5 prev loss: 34659.69 frac: 0.00008730673 
+	Iter: 5 gnorm: 3122693 
+Iter: 6 prev loss: 34657.59 frac: 0.00006045782 
+	Iter: 6 gnorm: 337950.6 
+Iter: 7 prev loss: 34657.34 frac: 0.000007252486 
+	Iter: 7 gnorm: 3904.915 
+Iter: 8 prev loss: 34657.34 frac: 0.00000008456159 
+	Iter: 8 gnorm: 10.04341 
+Iter: 9 prev loss: 34657.34 frac: 0.0000000002117974 
+	Iter: 9 gnorm: 0.2881267 
+Iter: 10 prev loss: 34657.34 frac: 0.000000000005827092 
+	Iter: 10 gnorm: 0.01972797 
+Iter: 11 prev loss: 34657.34 frac: 0.0000000000003799912 
+	Iter: 11 gnorm: 0.002220592 
+Iter: 12 prev loss: 34657.34 frac: 0.00000000000004072834 
+	Iter: 12 gnorm: 0.0003480654 
+Iter: 13 prev loss: 34657.34 frac: 0.000000000000006088257 
+	Iter: 13 gnorm: 0.00006931357 
+Iter: 14 prev loss: 34657.34 frac: 0.000000000000001049699 
+	Iter: 14 gnorm: 0.00001656393 
+Iter: 15 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 15 gnorm: 0.000004571654 
+Iter: 16 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 16 gnorm: 0.000001418353 
+Iter: 17 prev loss: 34657.34 frac: -0.0000000000000002099399 
+	Iter: 17 gnorm: 0.000000484878 
+Iter: 18 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 18 gnorm: 0.0000001799017 
+Iter: 19 prev loss: 34657.34 frac: 0 
+	Iter: 19 gnorm: 0.0000000715921 
+Iter: 20 prev loss: 34657.34 frac: 0 
+	Iter: 20 gnorm: 0.00000003027219 
+TIME_FL: 2.16 0.02 2.187 0 0 
+TIME_FS: 0.23 0 0.223 0 0 
+Iter: 1 prev loss: 34657.36 frac: 0 
+	Iter: 1 gnorm: 28163.96 
+Iter: 2 prev loss: 34658.01 frac: -0.0000188734 
+	Iter: 2 gnorm: 897447 
+Iter: 3 prev loss: 34660.98 frac: -0.00008560962 
+	Iter: 3 gnorm: 4840402 
+Iter: 4 prev loss: 34662.71 frac: -0.00005001808 
+	Iter: 4 gnorm: 7143837 
+Iter: 5 prev loss: 34659.69 frac: 0.00008730673 
+	Iter: 5 gnorm: 3122693 
+Iter: 6 prev loss: 34657.59 frac: 0.00006045782 
+	Iter: 6 gnorm: 337950.6 
+Iter: 7 prev loss: 34657.34 frac: 0.000007252486 
+	Iter: 7 gnorm: 3904.915 
+Iter: 8 prev loss: 34657.34 frac: 0.00000008456159 
+	Iter: 8 gnorm: 10.04341 
+Iter: 9 prev loss: 34657.34 frac: 0.0000000002117972 
+	Iter: 9 gnorm: 0.2881267 
+Iter: 10 prev loss: 34657.34 frac: 0.000000000005827092 
+	Iter: 10 gnorm: 0.01972797 
+Iter: 11 prev loss: 34657.34 frac: 0.0000000000003804111 
+	Iter: 11 gnorm: 0.002220592 
+Iter: 12 prev loss: 34657.34 frac: 0.00000000000004030846 
+	Iter: 12 gnorm: 0.0003480654 
+Iter: 13 prev loss: 34657.34 frac: 0.000000000000006298197 
+	Iter: 13 gnorm: 0.00006931357 
+Iter: 14 prev loss: 34657.34 frac: 0.000000000000001049699 
+	Iter: 14 gnorm: 0.00001656393 
+Iter: 15 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 15 gnorm: 0.000004571655 
+Iter: 16 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 16 gnorm: 0.000001418354 
+Iter: 17 prev loss: 34657.34 frac: -0.0000000000000002099399 
+	Iter: 17 gnorm: 0.000000484878 
+Iter: 18 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 18 gnorm: 0.0000001799018 
+Iter: 19 prev loss: 34657.34 frac: 0 
+	Iter: 19 gnorm: 0.00000007159217 
+Iter: 20 prev loss: 34657.34 frac: 0 
+	Iter: 20 gnorm: 0.00000003027229 
+TIME_SL: 1.95 0.1 2.057 0 0 
+TIME_SS: 0.26 0 0.254 0 0 
+Iter: 1 prev loss: 34657.36 frac: 0 
+	Iter: 1 gnorm: 28163.96 
+Iter: 2 prev loss: 34658.01 frac: -0.0000188734 
+	Iter: 2 gnorm: 897447 
+Iter: 3 prev loss: 34660.98 frac: -0.00008560962 
+	Iter: 3 gnorm: 4840402 
+Iter: 4 prev loss: 34662.71 frac: -0.00005001808 
+	Iter: 4 gnorm: 7143837 
+Iter: 5 prev loss: 34659.69 frac: 0.00008730673 
+	Iter: 5 gnorm: 3122693 
+Iter: 6 prev loss: 34657.59 frac: 0.00006045782 
+	Iter: 6 gnorm: 337950.6 
+Iter: 7 prev loss: 34657.34 frac: 0.000007252486 
+	Iter: 7 gnorm: 3904.915 
+Iter: 8 prev loss: 34657.34 frac: 0.00000008456159 
+	Iter: 8 gnorm: 10.04341 
+Iter: 9 prev loss: 34657.34 frac: 0.0000000002117974 
+	Iter: 9 gnorm: 0.2881267 
+Iter: 10 prev loss: 34657.34 frac: 0.000000000005827092 
+	Iter: 10 gnorm: 0.01972797 
+Iter: 11 prev loss: 34657.34 frac: 0.0000000000003799912 
+	Iter: 11 gnorm: 0.002220592 
+Iter: 12 prev loss: 34657.34 frac: 0.00000000000004072834 
+	Iter: 12 gnorm: 0.0003480654 
+Iter: 13 prev loss: 34657.34 frac: 0.000000000000006088257 
+	Iter: 13 gnorm: 0.00006931357 
+Iter: 14 prev loss: 34657.34 frac: 0.000000000000001049699 
+	Iter: 14 gnorm: 0.00001656393 
+Iter: 15 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 15 gnorm: 0.000004571654 
+Iter: 16 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 16 gnorm: 0.000001418353 
+Iter: 17 prev loss: 34657.34 frac: -0.0000000000000002099399 
+	Iter: 17 gnorm: 0.000000484878 
+Iter: 18 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 18 gnorm: 0.0000001799017 
+Iter: 19 prev loss: 34657.34 frac: 0 
+	Iter: 19 gnorm: 0.0000000715921 
+Iter: 20 prev loss: 34657.34 frac: 0 
+	Iter: 20 gnorm: 0.00000003027219 
+TIME_FL: 1.94 0 1.942 0 0 
+TIME_FS: 0.22 0 0.219 0 0 
+Iter: 1 prev loss: 34657.36 frac: 0 
+	Iter: 1 gnorm: 28163.96 
+Iter: 2 prev loss: 34658.01 frac: -0.0000188734 
+	Iter: 2 gnorm: 897447 
+Iter: 3 prev loss: 34660.98 frac: -0.00008560962 
+	Iter: 3 gnorm: 4840402 
+Iter: 4 prev loss: 34662.71 frac: -0.00005001808 
+	Iter: 4 gnorm: 7143837 
+Iter: 5 prev loss: 34659.69 frac: 0.00008730673 
+	Iter: 5 gnorm: 3122693 
+Iter: 6 prev loss: 34657.59 frac: 0.00006045782 
+	Iter: 6 gnorm: 337950.6 
+Iter: 7 prev loss: 34657.34 frac: 0.000007252486 
+	Iter: 7 gnorm: 3904.915 
+Iter: 8 prev loss: 34657.34 frac: 0.00000008456159 
+	Iter: 8 gnorm: 10.04341 
+Iter: 9 prev loss: 34657.34 frac: 0.0000000002117972 
+	Iter: 9 gnorm: 0.2881267 
+Iter: 10 prev loss: 34657.34 frac: 0.000000000005827092 
+	Iter: 10 gnorm: 0.01972797 
+Iter: 11 prev loss: 34657.34 frac: 0.0000000000003804111 
+	Iter: 11 gnorm: 0.002220592 
+Iter: 12 prev loss: 34657.34 frac: 0.00000000000004030846 
+	Iter: 12 gnorm: 0.0003480654 
+Iter: 13 prev loss: 34657.34 frac: 0.000000000000006298197 
+	Iter: 13 gnorm: 0.00006931357 
+Iter: 14 prev loss: 34657.34 frac: 0.000000000000001049699 
+	Iter: 14 gnorm: 0.00001656393 
+Iter: 15 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 15 gnorm: 0.000004571655 
+Iter: 16 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 16 gnorm: 0.000001418354 
+Iter: 17 prev loss: 34657.34 frac: -0.0000000000000002099399 
+	Iter: 17 gnorm: 0.000000484878 
+Iter: 18 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 18 gnorm: 0.0000001799018 
+Iter: 19 prev loss: 34657.34 frac: 0 
+	Iter: 19 gnorm: 0.00000007159217 
+Iter: 20 prev loss: 34657.34 frac: 0 
+	Iter: 20 gnorm: 0.00000003027229 
+TIME_SL: 1.92 0.01 1.942 0 0 
+TIME_SS: 0.26 0 0.255 0 0 
+Iter: 1 prev loss: 34657.36 frac: 0 
+	Iter: 1 gnorm: 28163.96 
+Iter: 2 prev loss: 34658.01 frac: -0.0000188734 
+	Iter: 2 gnorm: 897447 
+Iter: 3 prev loss: 34660.98 frac: -0.00008560962 
+	Iter: 3 gnorm: 4840402 
+Iter: 4 prev loss: 34662.71 frac: -0.00005001808 
+	Iter: 4 gnorm: 7143837 
+Iter: 5 prev loss: 34659.69 frac: 0.00008730673 
+	Iter: 5 gnorm: 3122693 
+Iter: 6 prev loss: 34657.59 frac: 0.00006045782 
+	Iter: 6 gnorm: 337950.6 
+Iter: 7 prev loss: 34657.34 frac: 0.000007252486 
+	Iter: 7 gnorm: 3904.915 
+Iter: 8 prev loss: 34657.34 frac: 0.00000008456159 
+	Iter: 8 gnorm: 10.04341 
+Iter: 9 prev loss: 34657.34 frac: 0.0000000002117974 
+	Iter: 9 gnorm: 0.2881267 
+Iter: 10 prev loss: 34657.34 frac: 0.000000000005827092 
+	Iter: 10 gnorm: 0.01972797 
+Iter: 11 prev loss: 34657.34 frac: 0.0000000000003799912 
+	Iter: 11 gnorm: 0.002220592 
+Iter: 12 prev loss: 34657.34 frac: 0.00000000000004072834 
+	Iter: 12 gnorm: 0.0003480654 
+Iter: 13 prev loss: 34657.34 frac: 0.000000000000006088257 
+	Iter: 13 gnorm: 0.00006931357 
+Iter: 14 prev loss: 34657.34 frac: 0.000000000000001049699 
+	Iter: 14 gnorm: 0.00001656393 
+Iter: 15 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 15 gnorm: 0.000004571654 
+Iter: 16 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 16 gnorm: 0.000001418353 
+Iter: 17 prev loss: 34657.34 frac: -0.0000000000000002099399 
+	Iter: 17 gnorm: 0.000000484878 
+Iter: 18 prev loss: 34657.34 frac: 0.0000000000000002099399 
+	Iter: 18 gnorm: 0.0000001799017 
+Iter: 19 prev loss: 34657.34 frac: 0 
+	Iter: 19 gnorm: 0.0000000715921 
+Iter: 20 prev loss: 34657.34 frac: 0 
+	Iter: 20 gnorm: 0.00000003027219 
+TIME_FL: 1.92 0.01 1.928 0 0 
+TIME_FS: 0.23 0 0.223 0 0 
+GEN_DATA: 100000 10000 4 40 
+TIME_J: 1.62 0.03 1.658 0 0 
+Iter: 1 prev loss: 69314.72 frac: 0 
+	Iter: 1 gnorm: 3327500 
+Iter: 2 prev loss: 69502.56 frac: -0.002709965 
+	Iter: 2 gnorm: 501813155 
+Iter: 3 prev loss: 75221.62 frac: -0.08228562 
+	Iter: 3 gnorm: 14854852087 
+Iter: 4 prev loss: 123128 frac: -0.63687 
+	Iter: 4 gnorm: 87023661313 
+Iter: 5 prev loss: 160135.9 frac: -0.3005643 
+	Iter: 5 gnorm: 112093509871 
+Iter: 6 prev loss: 104281 frac: 0.348797 
+	Iter: 6 gnorm: 66515335183 
+Iter: 7 prev loss: 90916.16 frac: 0.1281615 
+	Iter: 7 gnorm: 46843432310 
+Iter: 8 prev loss: 78977.08 frac: 0.1313197 
+	Iter: 8 gnorm: 23301866485 
+Iter: 9 prev loss: 72379.22 frac: 0.08354142 
+	Iter: 9 gnorm: 7922414717 
+Iter: 10 prev loss: 69937.81 frac: 0.03373079 
+	Iter: 10 gnorm: 1649147194 
+Iter: 11 prev loss: 69379.04 frac: 0.007989561 
+	Iter: 11 gnorm: 174349185 
+Iter: 12 prev loss: 69316.32 frac: 0.0009039613 
+	Iter: 12 gnorm: 7600619 
+Iter: 13 prev loss: 69313.5 frac: 0.00004074351 
+	Iter: 13 gnorm: 89062.93 
+Iter: 14 prev loss: 69313.47 frac: 0.0000004828089 
+	Iter: 14 gnorm: 47.34055 
+Iter: 15 prev loss: 69313.47 frac: 0.0000000002561276 
+	Iter: 15 gnorm: 0.1184645 
+Iter: 16 prev loss: 69313.47 frac: 0.0000000000006344494 
+	Iter: 16 gnorm: 0.001522208 
+Iter: 17 prev loss: 69313.47 frac: 0.000000000000008187798 
+	Iter: 17 gnorm: 0.00004335796 
+Iter: 18 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 18 gnorm: 0.000002054248 
+Iter: 19 prev loss: 69313.47 frac: -0.0000000000000004198871 
+	Iter: 19 gnorm: 0.0000001400766 
+Iter: 20 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 20 gnorm: 0.00000001260842 
+TIME_SL: 4.88 0.36 5.237 0 0 
+TIME_SS: 0.75 0.02 0.776 0 0 
+Iter: 1 prev loss: 69314.72 frac: 0 
+	Iter: 1 gnorm: 3327500 
+Iter: 2 prev loss: 69502.56 frac: -0.002709965 
+	Iter: 2 gnorm: 501813155 
+Iter: 3 prev loss: 75221.62 frac: -0.08228562 
+	Iter: 3 gnorm: 14854852087 
+Iter: 4 prev loss: 123128 frac: -0.63687 
+	Iter: 4 gnorm: 87023661312 
+Iter: 5 prev loss: 160135.9 frac: -0.3005643 
+	Iter: 5 gnorm: 112093509871 
+Iter: 6 prev loss: 104281 frac: 0.348797 
+	Iter: 6 gnorm: 66515335183 
+Iter: 7 prev loss: 90916.16 frac: 0.1281615 
+	Iter: 7 gnorm: 46843432310 
+Iter: 8 prev loss: 78977.08 frac: 0.1313197 
+	Iter: 8 gnorm: 23301866485 
+Iter: 9 prev loss: 72379.22 frac: 0.08354142 
+	Iter: 9 gnorm: 7922414717 
+Iter: 10 prev loss: 69937.81 frac: 0.03373079 
+	Iter: 10 gnorm: 1649147194 
+Iter: 11 prev loss: 69379.04 frac: 0.007989561 
+	Iter: 11 gnorm: 174349185 
+Iter: 12 prev loss: 69316.32 frac: 0.0009039613 
+	Iter: 12 gnorm: 7600619 
+Iter: 13 prev loss: 69313.5 frac: 0.00004074351 
+	Iter: 13 gnorm: 89062.93 
+Iter: 14 prev loss: 69313.47 frac: 0.0000004828089 
+	Iter: 14 gnorm: 47.34055 
+Iter: 15 prev loss: 69313.47 frac: 0.000000000256128 
+	Iter: 15 gnorm: 0.1184645 
+Iter: 16 prev loss: 69313.47 frac: 0.0000000000006342395 
+	Iter: 16 gnorm: 0.001522208 
+Iter: 17 prev loss: 69313.47 frac: 0.000000000000008187798 
+	Iter: 17 gnorm: 0.00004335795 
+Iter: 18 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 18 gnorm: 0.000002054247 
+Iter: 19 prev loss: 69313.47 frac: -0.0000000000000004198871 
+	Iter: 19 gnorm: 0.0000001400764 
+Iter: 20 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 20 gnorm: 0.00000001260835 
+TIME_FL: 2.96 0.02 2.976 0 0 
+TIME_FS: 0.41 0 0.41 0 0 
+Iter: 1 prev loss: 69314.72 frac: 0 
+	Iter: 1 gnorm: 3327500 
+Iter: 2 prev loss: 69502.56 frac: -0.002709965 
+	Iter: 2 gnorm: 501813155 
+Iter: 3 prev loss: 75221.62 frac: -0.08228562 
+	Iter: 3 gnorm: 14854852087 
+Iter: 4 prev loss: 123128 frac: -0.63687 
+	Iter: 4 gnorm: 87023661313 
+Iter: 5 prev loss: 160135.9 frac: -0.3005643 
+	Iter: 5 gnorm: 112093509871 
+Iter: 6 prev loss: 104281 frac: 0.348797 
+	Iter: 6 gnorm: 66515335183 
+Iter: 7 prev loss: 90916.16 frac: 0.1281615 
+	Iter: 7 gnorm: 46843432310 
+Iter: 8 prev loss: 78977.08 frac: 0.1313197 
+	Iter: 8 gnorm: 23301866485 
+Iter: 9 prev loss: 72379.22 frac: 0.08354142 
+	Iter: 9 gnorm: 7922414717 
+Iter: 10 prev loss: 69937.81 frac: 0.03373079 
+	Iter: 10 gnorm: 1649147194 
+Iter: 11 prev loss: 69379.04 frac: 0.007989561 
+	Iter: 11 gnorm: 174349185 
+Iter: 12 prev loss: 69316.32 frac: 0.0009039613 
+	Iter: 12 gnorm: 7600619 
+Iter: 13 prev loss: 69313.5 frac: 0.00004074351 
+	Iter: 13 gnorm: 89062.93 
+Iter: 14 prev loss: 69313.47 frac: 0.0000004828089 
+	Iter: 14 gnorm: 47.34055 
+Iter: 15 prev loss: 69313.47 frac: 0.0000000002561276 
+	Iter: 15 gnorm: 0.1184645 
+Iter: 16 prev loss: 69313.47 frac: 0.0000000000006344494 
+	Iter: 16 gnorm: 0.001522208 
+Iter: 17 prev loss: 69313.47 frac: 0.000000000000008187798 
+	Iter: 17 gnorm: 0.00004335796 
+Iter: 18 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 18 gnorm: 0.000002054248 
+Iter: 19 prev loss: 69313.47 frac: -0.0000000000000004198871 
+	Iter: 19 gnorm: 0.0000001400766 
+Iter: 20 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 20 gnorm: 0.00000001260842 
+TIME_SL: 3.59 0.38 3.971 0 0 
+TIME_SS: 0.5 0.02 0.523 0 0 
+Iter: 1 prev loss: 69314.72 frac: 0 
+	Iter: 1 gnorm: 3327500 
+Iter: 2 prev loss: 69502.56 frac: -0.002709965 
+	Iter: 2 gnorm: 501813155 
+Iter: 3 prev loss: 75221.62 frac: -0.08228562 
+	Iter: 3 gnorm: 14854852087 
+Iter: 4 prev loss: 123128 frac: -0.63687 
+	Iter: 4 gnorm: 87023661312 
+Iter: 5 prev loss: 160135.9 frac: -0.3005643 
+	Iter: 5 gnorm: 112093509871 
+Iter: 6 prev loss: 104281 frac: 0.348797 
+	Iter: 6 gnorm: 66515335183 
+Iter: 7 prev loss: 90916.16 frac: 0.1281615 
+	Iter: 7 gnorm: 46843432310 
+Iter: 8 prev loss: 78977.08 frac: 0.1313197 
+	Iter: 8 gnorm: 23301866485 
+Iter: 9 prev loss: 72379.22 frac: 0.08354142 
+	Iter: 9 gnorm: 7922414717 
+Iter: 10 prev loss: 69937.81 frac: 0.03373079 
+	Iter: 10 gnorm: 1649147194 
+Iter: 11 prev loss: 69379.04 frac: 0.007989561 
+	Iter: 11 gnorm: 174349185 
+Iter: 12 prev loss: 69316.32 frac: 0.0009039613 
+	Iter: 12 gnorm: 7600619 
+Iter: 13 prev loss: 69313.5 frac: 0.00004074351 
+	Iter: 13 gnorm: 89062.93 
+Iter: 14 prev loss: 69313.47 frac: 0.0000004828089 
+	Iter: 14 gnorm: 47.34055 
+Iter: 15 prev loss: 69313.47 frac: 0.000000000256128 
+	Iter: 15 gnorm: 0.1184645 
+Iter: 16 prev loss: 69313.47 frac: 0.0000000000006342395 
+	Iter: 16 gnorm: 0.001522208 
+Iter: 17 prev loss: 69313.47 frac: 0.000000000000008187798 
+	Iter: 17 gnorm: 0.00004335795 
+Iter: 18 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 18 gnorm: 0.000002054247 
+Iter: 19 prev loss: 69313.47 frac: -0.0000000000000004198871 
+	Iter: 19 gnorm: 0.0000001400764 
+Iter: 20 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 20 gnorm: 0.00000001260835 
+TIME_FL: 2.97 0.01 2.976 0 0 
+TIME_FS: 0.41 0 0.411 0 0 
+Iter: 1 prev loss: 69314.72 frac: 0 
+	Iter: 1 gnorm: 3327500 
+Iter: 2 prev loss: 69502.56 frac: -0.002709965 
+	Iter: 2 gnorm: 501813155 
+Iter: 3 prev loss: 75221.62 frac: -0.08228562 
+	Iter: 3 gnorm: 14854852087 
+Iter: 4 prev loss: 123128 frac: -0.63687 
+	Iter: 4 gnorm: 87023661313 
+Iter: 5 prev loss: 160135.9 frac: -0.3005643 
+	Iter: 5 gnorm: 112093509871 
+Iter: 6 prev loss: 104281 frac: 0.348797 
+	Iter: 6 gnorm: 66515335183 
+Iter: 7 prev loss: 90916.16 frac: 0.1281615 
+	Iter: 7 gnorm: 46843432310 
+Iter: 8 prev loss: 78977.08 frac: 0.1313197 
+	Iter: 8 gnorm: 23301866485 
+Iter: 9 prev loss: 72379.22 frac: 0.08354142 
+	Iter: 9 gnorm: 7922414717 
+Iter: 10 prev loss: 69937.81 frac: 0.03373079 
+	Iter: 10 gnorm: 1649147194 
+Iter: 11 prev loss: 69379.04 frac: 0.007989561 
+	Iter: 11 gnorm: 174349185 
+Iter: 12 prev loss: 69316.32 frac: 0.0009039613 
+	Iter: 12 gnorm: 7600619 
+Iter: 13 prev loss: 69313.5 frac: 0.00004074351 
+	Iter: 13 gnorm: 89062.93 
+Iter: 14 prev loss: 69313.47 frac: 0.0000004828089 
+	Iter: 14 gnorm: 47.34055 
+Iter: 15 prev loss: 69313.47 frac: 0.0000000002561276 
+	Iter: 15 gnorm: 0.1184645 
+Iter: 16 prev loss: 69313.47 frac: 0.0000000000006344494 
+	Iter: 16 gnorm: 0.001522208 
+Iter: 17 prev loss: 69313.47 frac: 0.000000000000008187798 
+	Iter: 17 gnorm: 0.00004335796 
+Iter: 18 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 18 gnorm: 0.000002054248 
+Iter: 19 prev loss: 69313.47 frac: -0.0000000000000004198871 
+	Iter: 19 gnorm: 0.0000001400766 
+Iter: 20 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 20 gnorm: 0.00000001260842 
+TIME_SL: 3.63 0.35 3.98 0 0 
+TIME_SS: 0.51 0.01 0.528 0 0 
+Iter: 1 prev loss: 69314.72 frac: 0 
+	Iter: 1 gnorm: 3327500 
+Iter: 2 prev loss: 69502.56 frac: -0.002709965 
+	Iter: 2 gnorm: 501813155 
+Iter: 3 prev loss: 75221.62 frac: -0.08228562 
+	Iter: 3 gnorm: 14854852087 
+Iter: 4 prev loss: 123128 frac: -0.63687 
+	Iter: 4 gnorm: 87023661312 
+Iter: 5 prev loss: 160135.9 frac: -0.3005643 
+	Iter: 5 gnorm: 112093509871 
+Iter: 6 prev loss: 104281 frac: 0.348797 
+	Iter: 6 gnorm: 66515335183 
+Iter: 7 prev loss: 90916.16 frac: 0.1281615 
+	Iter: 7 gnorm: 46843432310 
+Iter: 8 prev loss: 78977.08 frac: 0.1313197 
+	Iter: 8 gnorm: 23301866485 
+Iter: 9 prev loss: 72379.22 frac: 0.08354142 
+	Iter: 9 gnorm: 7922414717 
+Iter: 10 prev loss: 69937.81 frac: 0.03373079 
+	Iter: 10 gnorm: 1649147194 
+Iter: 11 prev loss: 69379.04 frac: 0.007989561 
+	Iter: 11 gnorm: 174349185 
+Iter: 12 prev loss: 69316.32 frac: 0.0009039613 
+	Iter: 12 gnorm: 7600619 
+Iter: 13 prev loss: 69313.5 frac: 0.00004074351 
+	Iter: 13 gnorm: 89062.93 
+Iter: 14 prev loss: 69313.47 frac: 0.0000004828089 
+	Iter: 14 gnorm: 47.34055 
+Iter: 15 prev loss: 69313.47 frac: 0.000000000256128 
+	Iter: 15 gnorm: 0.1184645 
+Iter: 16 prev loss: 69313.47 frac: 0.0000000000006342395 
+	Iter: 16 gnorm: 0.001522208 
+Iter: 17 prev loss: 69313.47 frac: 0.000000000000008187798 
+	Iter: 17 gnorm: 0.00004335795 
+Iter: 18 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 18 gnorm: 0.000002054247 
+Iter: 19 prev loss: 69313.47 frac: -0.0000000000000004198871 
+	Iter: 19 gnorm: 0.0000001400764 
+Iter: 20 prev loss: 69313.47 frac: 0.0000000000000002099435 
+	Iter: 20 gnorm: 0.00000001260835 
+TIME_FL: 3.18 0.03 3.21 0 0 
+TIME_FS: 0.41 0 0.411 0 0 
+GEN_DATA: 500000 10000 4 40 
+TIME_J: 9.62 0.13 9.756 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 332270.8 
+Iter: 2 prev loss: 346680.8 frac: -0.000309359 
+	Iter: 2 gnorm: 1426839417 
+Iter: 3 prev loss: 450796.2 frac: -0.3003205 
+	Iter: 3 gnorm: 1134426026948 
+Iter: 4 prev loss: 6134667 frac: -12.60852 
+	Iter: 4 gnorm: 3313128018117 
+Iter: 5 prev loss: 2158560 frac: 0.6481374 
+	Iter: 5 gnorm: 3322919360705 
+Iter: 6 prev loss: 4487478 frac: -1.078922 
+	Iter: 6 gnorm: 3316422187655 
+Iter: 7 prev loss: 1052433 frac: 0.7654735 
+	Iter: 7 gnorm: 3129723361457 
+Iter: 8 prev loss: 3562437 frac: -2.384955 
+	Iter: 8 gnorm: 3318263973449 
+Iter: 9 prev loss: 633695.9 frac: 0.8221173 
+	Iter: 9 gnorm: 2272498747878 
+Iter: 10 prev loss: 2465608 frac: -2.890839 
+	Iter: 10 gnorm: 3319778209124 
+Iter: 11 prev loss: 872528.8 frac: 0.6461203 
+	Iter: 11 gnorm: 2921685304428 
+Iter: 12 prev loss: 1977153 frac: -1.266003 
+	Iter: 12 gnorm: 3316579247320 
+Iter: 13 prev loss: 811095.9 frac: 0.5897657 
+	Iter: 13 gnorm: 2808665131446 
+Iter: 14 prev loss: 1561541 frac: -0.9252237 
+	Iter: 14 gnorm: 3296591901951 
+Iter: 15 prev loss: 824089.3 frac: 0.472259 
+	Iter: 15 gnorm: 2834940307125 
+Iter: 16 prev loss: 1246109 frac: -0.5121048 
+	Iter: 16 gnorm: 3232113944800 
+Iter: 17 prev loss: 826017.2 frac: 0.337123 
+	Iter: 17 gnorm: 2838723852759 
+Iter: 18 prev loss: 1010065 frac: -0.2228139 
+	Iter: 18 gnorm: 3089818142834 
+Iter: 19 prev loss: 801625.9 frac: 0.2063623 
+	Iter: 19 gnorm: 2788635111232 
+Iter: 20 prev loss: 841258.6 frac: -0.04944034 
+	Iter: 20 gnorm: 2864680830335 
+TIME_SL: 18.4 1.75 20.155 0 0 
+TIME_SS: 2.54 0.11 2.651 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 332270.8 
+Iter: 2 prev loss: 346680.8 frac: -0.000309359 
+	Iter: 2 gnorm: 1426839417 
+Iter: 3 prev loss: 450796.2 frac: -0.3003205 
+	Iter: 3 gnorm: 1134426026938 
+Iter: 4 prev loss: 6134667 frac: -12.60852 
+	Iter: 4 gnorm: 3313128018130 
+Iter: 5 prev loss: 2158560 frac: 0.6481374 
+	Iter: 5 gnorm: 3322919360724 
+Iter: 6 prev loss: 4487478 frac: -1.078922 
+	Iter: 6 gnorm: 3316422187704 
+Iter: 7 prev loss: 1052433 frac: 0.7654735 
+	Iter: 7 gnorm: 3129723361529 
+Iter: 8 prev loss: 3562437 frac: -2.384955 
+	Iter: 8 gnorm: 3318263973438 
+Iter: 9 prev loss: 633695.9 frac: 0.8221173 
+	Iter: 9 gnorm: 2272498747925 
+Iter: 10 prev loss: 2465608 frac: -2.890839 
+	Iter: 10 gnorm: 3319778209148 
+Iter: 11 prev loss: 872528.8 frac: 0.6461203 
+	Iter: 11 gnorm: 2921685304410 
+Iter: 12 prev loss: 1977153 frac: -1.266003 
+	Iter: 12 gnorm: 3316579247281 
+Iter: 13 prev loss: 811095.9 frac: 0.5897657 
+	Iter: 13 gnorm: 2808665131390 
+Iter: 14 prev loss: 1561541 frac: -0.9252237 
+	Iter: 14 gnorm: 3296591901921 
+Iter: 15 prev loss: 824089.3 frac: 0.472259 
+	Iter: 15 gnorm: 2834940307118 
+Iter: 16 prev loss: 1246109 frac: -0.5121048 
+	Iter: 16 gnorm: 3232113944812 
+Iter: 17 prev loss: 826017.2 frac: 0.337123 
+	Iter: 17 gnorm: 2838723852802 
+Iter: 18 prev loss: 1010065 frac: -0.2228139 
+	Iter: 18 gnorm: 3089818142869 
+Iter: 19 prev loss: 801625.9 frac: 0.2063623 
+	Iter: 19 gnorm: 2788635111262 
+Iter: 20 prev loss: 841258.6 frac: -0.04944034 
+	Iter: 20 gnorm: 2864680830384 
+TIME_FL: 11.99 0.16 12.155 0 0 
+TIME_FS: 1.97 0 1.967 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 332270.8 
+Iter: 2 prev loss: 346680.8 frac: -0.000309359 
+	Iter: 2 gnorm: 1426839417 
+Iter: 3 prev loss: 450796.2 frac: -0.3003205 
+	Iter: 3 gnorm: 1134426026948 
+Iter: 4 prev loss: 6134667 frac: -12.60852 
+	Iter: 4 gnorm: 3313128018117 
+Iter: 5 prev loss: 2158560 frac: 0.6481374 
+	Iter: 5 gnorm: 3322919360705 
+Iter: 6 prev loss: 4487478 frac: -1.078922 
+	Iter: 6 gnorm: 3316422187655 
+Iter: 7 prev loss: 1052433 frac: 0.7654735 
+	Iter: 7 gnorm: 3129723361457 
+Iter: 8 prev loss: 3562437 frac: -2.384955 
+	Iter: 8 gnorm: 3318263973449 
+Iter: 9 prev loss: 633695.9 frac: 0.8221173 
+	Iter: 9 gnorm: 2272498747878 
+Iter: 10 prev loss: 2465608 frac: -2.890839 
+	Iter: 10 gnorm: 3319778209124 
+Iter: 11 prev loss: 872528.8 frac: 0.6461203 
+	Iter: 11 gnorm: 2921685304428 
+Iter: 12 prev loss: 1977153 frac: -1.266003 
+	Iter: 12 gnorm: 3316579247320 
+Iter: 13 prev loss: 811095.9 frac: 0.5897657 
+	Iter: 13 gnorm: 2808665131446 
+Iter: 14 prev loss: 1561541 frac: -0.9252237 
+	Iter: 14 gnorm: 3296591901951 
+Iter: 15 prev loss: 824089.3 frac: 0.472259 
+	Iter: 15 gnorm: 2834940307125 
+Iter: 16 prev loss: 1246109 frac: -0.5121048 
+	Iter: 16 gnorm: 3232113944800 
+Iter: 17 prev loss: 826017.2 frac: 0.337123 
+	Iter: 17 gnorm: 2838723852759 
+Iter: 18 prev loss: 1010065 frac: -0.2228139 
+	Iter: 18 gnorm: 3089818142834 
+Iter: 19 prev loss: 801625.9 frac: 0.2063623 
+	Iter: 19 gnorm: 2788635111232 
+Iter: 20 prev loss: 841258.6 frac: -0.04944034 
+	Iter: 20 gnorm: 2864680830335 
+TIME_SL: 16.67 1.93 18.611 0 0 
+TIME_SS: 2.55 0.1 2.643 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 332270.8 
+Iter: 2 prev loss: 346680.8 frac: -0.000309359 
+	Iter: 2 gnorm: 1426839417 
+Iter: 3 prev loss: 450796.2 frac: -0.3003205 
+	Iter: 3 gnorm: 1134426026938 
+Iter: 4 prev loss: 6134667 frac: -12.60852 
+	Iter: 4 gnorm: 3313128018130 
+Iter: 5 prev loss: 2158560 frac: 0.6481374 
+	Iter: 5 gnorm: 3322919360724 
+Iter: 6 prev loss: 4487478 frac: -1.078922 
+	Iter: 6 gnorm: 3316422187704 
+Iter: 7 prev loss: 1052433 frac: 0.7654735 
+	Iter: 7 gnorm: 3129723361529 
+Iter: 8 prev loss: 3562437 frac: -2.384955 
+	Iter: 8 gnorm: 3318263973438 
+Iter: 9 prev loss: 633695.9 frac: 0.8221173 
+	Iter: 9 gnorm: 2272498747925 
+Iter: 10 prev loss: 2465608 frac: -2.890839 
+	Iter: 10 gnorm: 3319778209148 
+Iter: 11 prev loss: 872528.8 frac: 0.6461203 
+	Iter: 11 gnorm: 2921685304410 
+Iter: 12 prev loss: 1977153 frac: -1.266003 
+	Iter: 12 gnorm: 3316579247281 
+Iter: 13 prev loss: 811095.9 frac: 0.5897657 
+	Iter: 13 gnorm: 2808665131390 
+Iter: 14 prev loss: 1561541 frac: -0.9252237 
+	Iter: 14 gnorm: 3296591901921 
+Iter: 15 prev loss: 824089.3 frac: 0.472259 
+	Iter: 15 gnorm: 2834940307118 
+Iter: 16 prev loss: 1246109 frac: -0.5121048 
+	Iter: 16 gnorm: 3232113944812 
+Iter: 17 prev loss: 826017.2 frac: 0.337123 
+	Iter: 17 gnorm: 2838723852802 
+Iter: 18 prev loss: 1010065 frac: -0.2228139 
+	Iter: 18 gnorm: 3089818142869 
+Iter: 19 prev loss: 801625.9 frac: 0.2063623 
+	Iter: 19 gnorm: 2788635111262 
+Iter: 20 prev loss: 841258.6 frac: -0.04944034 
+	Iter: 20 gnorm: 2864680830384 
+TIME_FL: 12.03 0.16 12.2 0 0 
+TIME_FS: 1.97 0.02 1.986 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 332270.8 
+Iter: 2 prev loss: 346680.8 frac: -0.000309359 
+	Iter: 2 gnorm: 1426839417 
+Iter: 3 prev loss: 450796.2 frac: -0.3003205 
+	Iter: 3 gnorm: 1134426026948 
+Iter: 4 prev loss: 6134667 frac: -12.60852 
+	Iter: 4 gnorm: 3313128018117 
+Iter: 5 prev loss: 2158560 frac: 0.6481374 
+	Iter: 5 gnorm: 3322919360705 
+Iter: 6 prev loss: 4487478 frac: -1.078922 
+	Iter: 6 gnorm: 3316422187655 
+Iter: 7 prev loss: 1052433 frac: 0.7654735 
+	Iter: 7 gnorm: 3129723361457 
+Iter: 8 prev loss: 3562437 frac: -2.384955 
+	Iter: 8 gnorm: 3318263973449 
+Iter: 9 prev loss: 633695.9 frac: 0.8221173 
+	Iter: 9 gnorm: 2272498747878 
+Iter: 10 prev loss: 2465608 frac: -2.890839 
+	Iter: 10 gnorm: 3319778209124 
+Iter: 11 prev loss: 872528.8 frac: 0.6461203 
+	Iter: 11 gnorm: 2921685304428 
+Iter: 12 prev loss: 1977153 frac: -1.266003 
+	Iter: 12 gnorm: 3316579247320 
+Iter: 13 prev loss: 811095.9 frac: 0.5897657 
+	Iter: 13 gnorm: 2808665131446 
+Iter: 14 prev loss: 1561541 frac: -0.9252237 
+	Iter: 14 gnorm: 3296591901951 
+Iter: 15 prev loss: 824089.3 frac: 0.472259 
+	Iter: 15 gnorm: 2834940307125 
+Iter: 16 prev loss: 1246109 frac: -0.5121048 
+	Iter: 16 gnorm: 3232113944800 
+Iter: 17 prev loss: 826017.2 frac: 0.337123 
+	Iter: 17 gnorm: 2838723852759 
+Iter: 18 prev loss: 1010065 frac: -0.2228139 
+	Iter: 18 gnorm: 3089818142834 
+Iter: 19 prev loss: 801625.9 frac: 0.2063623 
+	Iter: 19 gnorm: 2788635111232 
+Iter: 20 prev loss: 841258.6 frac: -0.04944034 
+	Iter: 20 gnorm: 2864680830335 
+TIME_SL: 17.21 1.83 19.047 0 0 
+TIME_SS: 2.59 0.05 2.639 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 332270.8 
+Iter: 2 prev loss: 346680.8 frac: -0.000309359 
+	Iter: 2 gnorm: 1426839417 
+Iter: 3 prev loss: 450796.2 frac: -0.3003205 
+	Iter: 3 gnorm: 1134426026938 
+Iter: 4 prev loss: 6134667 frac: -12.60852 
+	Iter: 4 gnorm: 3313128018130 
+Iter: 5 prev loss: 2158560 frac: 0.6481374 
+	Iter: 5 gnorm: 3322919360724 
+Iter: 6 prev loss: 4487478 frac: -1.078922 
+	Iter: 6 gnorm: 3316422187704 
+Iter: 7 prev loss: 1052433 frac: 0.7654735 
+	Iter: 7 gnorm: 3129723361529 
+Iter: 8 prev loss: 3562437 frac: -2.384955 
+	Iter: 8 gnorm: 3318263973438 
+Iter: 9 prev loss: 633695.9 frac: 0.8221173 
+	Iter: 9 gnorm: 2272498747925 
+Iter: 10 prev loss: 2465608 frac: -2.890839 
+	Iter: 10 gnorm: 3319778209148 
+Iter: 11 prev loss: 872528.8 frac: 0.6461203 
+	Iter: 11 gnorm: 2921685304410 
+Iter: 12 prev loss: 1977153 frac: -1.266003 
+	Iter: 12 gnorm: 3316579247281 
+Iter: 13 prev loss: 811095.9 frac: 0.5897657 
+	Iter: 13 gnorm: 2808665131390 
+Iter: 14 prev loss: 1561541 frac: -0.9252237 
+	Iter: 14 gnorm: 3296591901921 
+Iter: 15 prev loss: 824089.3 frac: 0.472259 
+	Iter: 15 gnorm: 2834940307118 
+Iter: 16 prev loss: 1246109 frac: -0.5121048 
+	Iter: 16 gnorm: 3232113944812 
+Iter: 17 prev loss: 826017.2 frac: 0.337123 
+	Iter: 17 gnorm: 2838723852802 
+Iter: 18 prev loss: 1010065 frac: -0.2228139 
+	Iter: 18 gnorm: 3089818142869 
+Iter: 19 prev loss: 801625.9 frac: 0.2063623 
+	Iter: 19 gnorm: 2788635111262 
+Iter: 20 prev loss: 841258.6 frac: -0.04944034 
+	Iter: 20 gnorm: 2864680830384 
+TIME_FL: 11.79 0.16 11.956 0 0 
+TIME_FS: 1.99 0 1.983 0 0 
+GEN_DATA: 1000000 10000 4 40 
+TIME_J: 12.99 0.23 13.229 0 0 
+Iter: 1 prev loss: 693147.2 frac: 0 
+	Iter: 1 gnorm: 14618426 
+Iter: 2 prev loss: 702697.4 frac: -0.01377812 
+	Iter: 2 gnorm: 251761607486 
+Iter: 3 prev loss: 9019701 frac: -11.83582 
+	Iter: 3 gnorm: 13319872185888 
+Iter: 4 prev loss: 35285747 frac: -2.912075 
+	Iter: 4 gnorm: 13211545364456 
+Iter: 5 prev loss: 2227369 frac: 0.9368763 
+	Iter: 5 gnorm: 12662711859232 
+Iter: 6 prev loss: 23750241 frac: -9.662915 
+	Iter: 6 gnorm: 13290411895880 
+Iter: 7 prev loss: 1622684 frac: 0.9316772 
+	Iter: 7 gnorm: 11252324702136 
+Iter: 8 prev loss: 15877144 frac: -8.784494 
+	Iter: 8 gnorm: 13250362570986 
+Iter: 9 prev loss: 919243.1 frac: 0.9421027 
+	Iter: 9 gnorm: 4845660057682 
+Iter: 10 prev loss: 8215212 frac: -7.936931 
+	Iter: 10 gnorm: 13265682631914 
+Iter: 11 prev loss: 5065830 frac: 0.3833598 
+	Iter: 11 gnorm: 13325641973362 
+Iter: 12 prev loss: 7036412 frac: -0.3889949 
+	Iter: 12 gnorm: 13268003692489 
+Iter: 13 prev loss: 4032423 frac: 0.4269205 
+	Iter: 13 gnorm: 13312975611497 
+Iter: 14 prev loss: 6203157 frac: -0.5383199 
+	Iter: 14 gnorm: 13269496424033 
+Iter: 15 prev loss: 3286000 frac: 0.4702698 
+	Iter: 15 gnorm: 13256347014942 
+Iter: 16 prev loss: 5566882 frac: -0.6941213 
+	Iter: 16 gnorm: 13270217207947 
+Iter: 17 prev loss: 2739239 frac: 0.5079401 
+	Iter: 17 gnorm: 13108788691266 
+Iter: 18 prev loss: 5031384 frac: -0.8367813 
+	Iter: 18 gnorm: 13269815453929 
+Iter: 19 prev loss: 2357083 frac: 0.5315239 
+	Iter: 19 gnorm: 12853218451579 
+Iter: 20 prev loss: 4532893 frac: -0.9230945 
+	Iter: 20 gnorm: 13266975407095 
+TIME_SL: 35.4 3.32 38.728 0 0 
+TIME_SS: 5.22 0.15 5.368 0 0 
+Iter: 1 prev loss: 693147.2 frac: 0 
+	Iter: 1 gnorm: 14618426 
+Iter: 2 prev loss: 702697.4 frac: -0.01377812 
+	Iter: 2 gnorm: 251761607483 
+Iter: 3 prev loss: 9019701 frac: -11.83582 
+	Iter: 3 gnorm: 13319872185920 
+Iter: 4 prev loss: 35285747 frac: -2.912075 
+	Iter: 4 gnorm: 13211545364680 
+Iter: 5 prev loss: 2227369 frac: 0.9368763 
+	Iter: 5 gnorm: 12662711858968 
+Iter: 6 prev loss: 23750241 frac: -9.662915 
+	Iter: 6 gnorm: 13290411896105 
+Iter: 7 prev loss: 1622684 frac: 0.9316772 
+	Iter: 7 gnorm: 11252324701044 
+Iter: 8 prev loss: 15877144 frac: -8.784494 
+	Iter: 8 gnorm: 13250362571211 
+Iter: 9 prev loss: 919243.1 frac: 0.9421027 
+	Iter: 9 gnorm: 4845660064911 
+Iter: 10 prev loss: 8215212 frac: -7.936931 
+	Iter: 10 gnorm: 13265682631853 
+Iter: 11 prev loss: 5065830 frac: 0.3833598 
+	Iter: 11 gnorm: 13325641973226 
+Iter: 12 prev loss: 7036412 frac: -0.3889949 
+	Iter: 12 gnorm: 13268003692514 
+Iter: 13 prev loss: 4032423 frac: 0.4269205 
+	Iter: 13 gnorm: 13312975611249 
+Iter: 14 prev loss: 6203157 frac: -0.5383199 
+	Iter: 14 gnorm: 13269496424170 
+Iter: 15 prev loss: 3286000 frac: 0.4702698 
+	Iter: 15 gnorm: 13256347013914 
+Iter: 16 prev loss: 5566882 frac: -0.6941213 
+	Iter: 16 gnorm: 13270217207821 
+Iter: 17 prev loss: 2739239 frac: 0.5079401 
+	Iter: 17 gnorm: 13108788689116 
+Iter: 18 prev loss: 5031384 frac: -0.8367813 
+	Iter: 18 gnorm: 13269815453907 
+Iter: 19 prev loss: 2357083 frac: 0.5315239 
+	Iter: 19 gnorm: 12853218447137 
+Iter: 20 prev loss: 4532893 frac: -0.9230945 
+	Iter: 20 gnorm: 13266975407255 
+TIME_FL: 23.84 0.07 23.92 0 0 
+TIME_FS: 3.92 0 3.92 0 0 
+Iter: 1 prev loss: 693147.2 frac: 0 
+	Iter: 1 gnorm: 14618426 
+Iter: 2 prev loss: 702697.4 frac: -0.01377812 
+	Iter: 2 gnorm: 251761607486 
+Iter: 3 prev loss: 9019701 frac: -11.83582 
+	Iter: 3 gnorm: 13319872185888 
+Iter: 4 prev loss: 35285747 frac: -2.912075 
+	Iter: 4 gnorm: 13211545364456 
+Iter: 5 prev loss: 2227369 frac: 0.9368763 
+	Iter: 5 gnorm: 12662711859232 
+Iter: 6 prev loss: 23750241 frac: -9.662915 
+	Iter: 6 gnorm: 13290411895880 
+Iter: 7 prev loss: 1622684 frac: 0.9316772 
+	Iter: 7 gnorm: 11252324702136 
+Iter: 8 prev loss: 15877144 frac: -8.784494 
+	Iter: 8 gnorm: 13250362570986 
+Iter: 9 prev loss: 919243.1 frac: 0.9421027 
+	Iter: 9 gnorm: 4845660057682 
+Iter: 10 prev loss: 8215212 frac: -7.936931 
+	Iter: 10 gnorm: 13265682631914 
+Iter: 11 prev loss: 5065830 frac: 0.3833598 
+	Iter: 11 gnorm: 13325641973362 
+Iter: 12 prev loss: 7036412 frac: -0.3889949 
+	Iter: 12 gnorm: 13268003692489 
+Iter: 13 prev loss: 4032423 frac: 0.4269205 
+	Iter: 13 gnorm: 13312975611497 
+Iter: 14 prev loss: 6203157 frac: -0.5383199 
+	Iter: 14 gnorm: 13269496424033 
+Iter: 15 prev loss: 3286000 frac: 0.4702698 
+	Iter: 15 gnorm: 13256347014942 
+Iter: 16 prev loss: 5566882 frac: -0.6941213 
+	Iter: 16 gnorm: 13270217207947 
+Iter: 17 prev loss: 2739239 frac: 0.5079401 
+	Iter: 17 gnorm: 13108788691266 
+Iter: 18 prev loss: 5031384 frac: -0.8367813 
+	Iter: 18 gnorm: 13269815453929 
+Iter: 19 prev loss: 2357083 frac: 0.5315239 
+	Iter: 19 gnorm: 12853218451579 
+Iter: 20 prev loss: 4532893 frac: -0.9230945 
+	Iter: 20 gnorm: 13266975407095 
+TIME_SL: 33.9 3.47 37.376 0 0 
+TIME_SS: 5.24 0.13 5.378 0 0 
+Iter: 1 prev loss: 693147.2 frac: 0 
+	Iter: 1 gnorm: 14618426 
+Iter: 2 prev loss: 702697.4 frac: -0.01377812 
+	Iter: 2 gnorm: 251761607483 
+Iter: 3 prev loss: 9019701 frac: -11.83582 
+	Iter: 3 gnorm: 13319872185920 
+Iter: 4 prev loss: 35285747 frac: -2.912075 
+	Iter: 4 gnorm: 13211545364680 
+Iter: 5 prev loss: 2227369 frac: 0.9368763 
+	Iter: 5 gnorm: 12662711858968 
+Iter: 6 prev loss: 23750241 frac: -9.662915 
+	Iter: 6 gnorm: 13290411896105 
+Iter: 7 prev loss: 1622684 frac: 0.9316772 
+	Iter: 7 gnorm: 11252324701044 
+Iter: 8 prev loss: 15877144 frac: -8.784494 
+	Iter: 8 gnorm: 13250362571211 
+Iter: 9 prev loss: 919243.1 frac: 0.9421027 
+	Iter: 9 gnorm: 4845660064911 
+Iter: 10 prev loss: 8215212 frac: -7.936931 
+	Iter: 10 gnorm: 13265682631853 
+Iter: 11 prev loss: 5065830 frac: 0.3833598 
+	Iter: 11 gnorm: 13325641973226 
+Iter: 12 prev loss: 7036412 frac: -0.3889949 
+	Iter: 12 gnorm: 13268003692514 
+Iter: 13 prev loss: 4032423 frac: 0.4269205 
+	Iter: 13 gnorm: 13312975611249 
+Iter: 14 prev loss: 6203157 frac: -0.5383199 
+	Iter: 14 gnorm: 13269496424170 
+Iter: 15 prev loss: 3286000 frac: 0.4702698 
+	Iter: 15 gnorm: 13256347013914 
+Iter: 16 prev loss: 5566882 frac: -0.6941213 
+	Iter: 16 gnorm: 13270217207821 
+Iter: 17 prev loss: 2739239 frac: 0.5079401 
+	Iter: 17 gnorm: 13108788689116 
+Iter: 18 prev loss: 5031384 frac: -0.8367813 
+	Iter: 18 gnorm: 13269815453907 
+Iter: 19 prev loss: 2357083 frac: 0.5315239 
+	Iter: 19 gnorm: 12853218447137 
+Iter: 20 prev loss: 4532893 frac: -0.9230945 
+	Iter: 20 gnorm: 13266975407255 
+TIME_FL: 24.14 0.19 24.336 0 0 
+TIME_FS: 3.94 0 3.942 0 0 
+Iter: 1 prev loss: 693147.2 frac: 0 
+	Iter: 1 gnorm: 14618426 
+Iter: 2 prev loss: 702697.4 frac: -0.01377812 
+	Iter: 2 gnorm: 251761607486 
+Iter: 3 prev loss: 9019701 frac: -11.83582 
+	Iter: 3 gnorm: 13319872185888 
+Iter: 4 prev loss: 35285747 frac: -2.912075 
+	Iter: 4 gnorm: 13211545364456 
+Iter: 5 prev loss: 2227369 frac: 0.9368763 
+	Iter: 5 gnorm: 12662711859232 
+Iter: 6 prev loss: 23750241 frac: -9.662915 
+	Iter: 6 gnorm: 13290411895880 
+Iter: 7 prev loss: 1622684 frac: 0.9316772 
+	Iter: 7 gnorm: 11252324702136 
+Iter: 8 prev loss: 15877144 frac: -8.784494 
+	Iter: 8 gnorm: 13250362570986 
+Iter: 9 prev loss: 919243.1 frac: 0.9421027 
+	Iter: 9 gnorm: 4845660057682 
+Iter: 10 prev loss: 8215212 frac: -7.936931 
+	Iter: 10 gnorm: 13265682631914 
+Iter: 11 prev loss: 5065830 frac: 0.3833598 
+	Iter: 11 gnorm: 13325641973362 
+Iter: 12 prev loss: 7036412 frac: -0.3889949 
+	Iter: 12 gnorm: 13268003692489 
+Iter: 13 prev loss: 4032423 frac: 0.4269205 
+	Iter: 13 gnorm: 13312975611497 
+Iter: 14 prev loss: 6203157 frac: -0.5383199 
+	Iter: 14 gnorm: 13269496424033 
+Iter: 15 prev loss: 3286000 frac: 0.4702698 
+	Iter: 15 gnorm: 13256347014942 
+Iter: 16 prev loss: 5566882 frac: -0.6941213 
+	Iter: 16 gnorm: 13270217207947 
+Iter: 17 prev loss: 2739239 frac: 0.5079401 
+	Iter: 17 gnorm: 13108788691266 
+Iter: 18 prev loss: 5031384 frac: -0.8367813 
+	Iter: 18 gnorm: 13269815453929 
+Iter: 19 prev loss: 2357083 frac: 0.5315239 
+	Iter: 19 gnorm: 12853218451579 
+Iter: 20 prev loss: 4532893 frac: -0.9230945 
+	Iter: 20 gnorm: 13266975407095 
+TIME_SL: 33.23 3.82 37.076 0 0 
+TIME_SS: 5.22 0.15 5.365 0 0 
+Iter: 1 prev loss: 693147.2 frac: 0 
+	Iter: 1 gnorm: 14618426 
+Iter: 2 prev loss: 702697.4 frac: -0.01377812 
+	Iter: 2 gnorm: 251761607483 
+Iter: 3 prev loss: 9019701 frac: -11.83582 
+	Iter: 3 gnorm: 13319872185920 
+Iter: 4 prev loss: 35285747 frac: -2.912075 
+	Iter: 4 gnorm: 13211545364680 
+Iter: 5 prev loss: 2227369 frac: 0.9368763 
+	Iter: 5 gnorm: 12662711858968 
+Iter: 6 prev loss: 23750241 frac: -9.662915 
+	Iter: 6 gnorm: 13290411896105 
+Iter: 7 prev loss: 1622684 frac: 0.9316772 
+	Iter: 7 gnorm: 11252324701044 
+Iter: 8 prev loss: 15877144 frac: -8.784494 
+	Iter: 8 gnorm: 13250362571211 
+Iter: 9 prev loss: 919243.1 frac: 0.9421027 
+	Iter: 9 gnorm: 4845660064911 
+Iter: 10 prev loss: 8215212 frac: -7.936931 
+	Iter: 10 gnorm: 13265682631853 
+Iter: 11 prev loss: 5065830 frac: 0.3833598 
+	Iter: 11 gnorm: 13325641973226 
+Iter: 12 prev loss: 7036412 frac: -0.3889949 
+	Iter: 12 gnorm: 13268003692514 
+Iter: 13 prev loss: 4032423 frac: 0.4269205 
+	Iter: 13 gnorm: 13312975611249 
+Iter: 14 prev loss: 6203157 frac: -0.5383199 
+	Iter: 14 gnorm: 13269496424170 
+Iter: 15 prev loss: 3286000 frac: 0.4702698 
+	Iter: 15 gnorm: 13256347013914 
+Iter: 16 prev loss: 5566882 frac: -0.6941213 
+	Iter: 16 gnorm: 13270217207821 
+Iter: 17 prev loss: 2739239 frac: 0.5079401 
+	Iter: 17 gnorm: 13108788689116 
+Iter: 18 prev loss: 5031384 frac: -0.8367813 
+	Iter: 18 gnorm: 13269815453907 
+Iter: 19 prev loss: 2357083 frac: 0.5315239 
+	Iter: 19 gnorm: 12853218447137 
+Iter: 20 prev loss: 4532893 frac: -0.9230945 
+	Iter: 20 gnorm: 13266975407255 
+TIME_FL: 24.02 0.25 24.273 0 0 
+TIME_FS: 3.94 0 3.939 0 0 
+GEN_DATA: 5000000 10000 4 40 
+TIME_J: 119.51 1.32 120.834 0 0 
+Iter: 1 prev loss: 3465736 frac: 0 
+	Iter: 1 gnorm: 3248119 
+Iter: 2 prev loss: 3476504 frac: -0.0031069 
+	Iter: 2 gnorm: 1430067390012 
+Iter: 3 prev loss: 108734714 frac: -30.27703 
+	Iter: 3 gnorm: 332598285250278 
+Iter: 4 prev loss: 998570077 frac: -8.183544 
+	Iter: 4 gnorm: 330687111724613 
+Iter: 5 prev loss: 170818901 frac: 0.8289365 
+	Iter: 5 gnorm: 332342614077684 
+Iter: 6 prev loss: 493894646 frac: -1.891335 
+	Iter: 6 gnorm: 331827965388020 
+Iter: 7 prev loss: 59590383 frac: 0.879346 
+	Iter: 7 gnorm: 332565071050798 
+Iter: 8 prev loss: 415404918 frac: -5.971006 
+	Iter: 8 gnorm: 331984944842274 
+Iter: 9 prev loss: 3468453 frac: 0.9916504 
+	Iter: 9 gnorm: 361444400209 
+Iter: 10 prev loss: 12060206 frac: -2.477114 
+	Iter: 10 gnorm: 321974522746759 
+Iter: 11 prev loss: 315178723 frac: -25.13378 
+	Iter: 11 gnorm: 332185397233468 
+Iter: 12 prev loss: 13081655 frac: 0.9584945 
+	Iter: 12 gnorm: 325679682595941 
+Iter: 13 prev loss: 261147794 frac: -18.9629 
+	Iter: 13 gnorm: 332161956290568 
+Iter: 14 prev loss: 6057638 frac: 0.9768038 
+	Iter: 14 gnorm: 214722645170216 
+Iter: 15 prev loss: 185353886 frac: -29.59838 
+	Iter: 15 gnorm: 332445046907103 
+Iter: 16 prev loss: 36338873 frac: 0.8039487 
+	Iter: 16 gnorm: 332610927893125 
+Iter: 17 prev loss: 171553554 frac: -3.720938 
+	Iter: 17 gnorm: 332472647571176 
+Iter: 18 prev loss: 24069943 frac: 0.8596943 
+	Iter: 18 gnorm: 332548581633675 
+Iter: 19 prev loss: 160709350 frac: -5.676765 
+	Iter: 19 gnorm: 332494335980089 
+Iter: 20 prev loss: 14346436 frac: 0.9107305 
+	Iter: 20 gnorm: 328374194544541 
+TIME_SL: 174.24 18.19 192.469 0 0 
+TIME_SS: 26.83 1.33 28.156 0 0 
+Iter: 1 prev loss: 3465736 frac: 0 
+	Iter: 1 gnorm: 3248119 
+Iter: 2 prev loss: 3476504 frac: -0.0031069 
+	Iter: 2 gnorm: 1430067390040 
+Iter: 3 prev loss: 108734714 frac: -30.27703 
+	Iter: 3 gnorm: 332598285222034 
+Iter: 4 prev loss: 998570077 frac: -8.183544 
+	Iter: 4 gnorm: 330687111696555 
+Iter: 5 prev loss: 170818901 frac: 0.8289365 
+	Iter: 5 gnorm: 332342614049486 
+Iter: 6 prev loss: 493894646 frac: -1.891335 
+	Iter: 6 gnorm: 331827965359841 
+Iter: 7 prev loss: 59590383 frac: 0.879346 
+	Iter: 7 gnorm: 332565071026559 
+Iter: 8 prev loss: 415404918 frac: -5.971006 
+	Iter: 8 gnorm: 331984944814076 
+Iter: 9 prev loss: 3468453 frac: 0.9916504 
+	Iter: 9 gnorm: 361444437960 
+Iter: 10 prev loss: 12060207 frac: -2.477114 
+	Iter: 10 gnorm: 321974525378759 
+Iter: 11 prev loss: 315178724 frac: -25.13377 
+	Iter: 11 gnorm: 332185397203824 
+Iter: 12 prev loss: 13081656 frac: 0.9584945 
+	Iter: 12 gnorm: 325679684644150 
+Iter: 13 prev loss: 261147794 frac: -18.9629 
+	Iter: 13 gnorm: 332161956262073 
+Iter: 14 prev loss: 6057638 frac: 0.9768038 
+	Iter: 14 gnorm: 214722650853384 
+Iter: 15 prev loss: 185353888 frac: -29.59838 
+	Iter: 15 gnorm: 332445046874116 
+Iter: 16 prev loss: 36338871 frac: 0.8039487 
+	Iter: 16 gnorm: 332610927851356 
+Iter: 17 prev loss: 171553556 frac: -3.720938 
+	Iter: 17 gnorm: 332472647538192 
+Iter: 18 prev loss: 24069941 frac: 0.8596943 
+	Iter: 18 gnorm: 332548581554622 
+Iter: 19 prev loss: 160709352 frac: -5.676766 
+	Iter: 19 gnorm: 332494335947129 
+Iter: 20 prev loss: 14346433 frac: 0.9107306 
+	Iter: 20 gnorm: 328374190512752 
+TIME_FL: 129.46 5.71 135.184 0 0 
+TIME_FS: 19.81 0.08 19.89 0 0 
+Iter: 1 prev loss: 3465736 frac: 0 
+	Iter: 1 gnorm: 3248119 
+Iter: 2 prev loss: 3476504 frac: -0.0031069 
+	Iter: 2 gnorm: 1430067390012 
+Iter: 3 prev loss: 108734714 frac: -30.27703 
+	Iter: 3 gnorm: 332598285250278 
+Iter: 4 prev loss: 998570077 frac: -8.183544 
+	Iter: 4 gnorm: 330687111724613 
+Iter: 5 prev loss: 170818901 frac: 0.8289365 
+	Iter: 5 gnorm: 332342614077684 
+Iter: 6 prev loss: 493894646 frac: -1.891335 
+	Iter: 6 gnorm: 331827965388020 
+Iter: 7 prev loss: 59590383 frac: 0.879346 
+	Iter: 7 gnorm: 332565071050798 
+Iter: 8 prev loss: 415404918 frac: -5.971006 
+	Iter: 8 gnorm: 331984944842274 
+Iter: 9 prev loss: 3468453 frac: 0.9916504 
+	Iter: 9 gnorm: 361444400209 
+Iter: 10 prev loss: 12060206 frac: -2.477114 
+	Iter: 10 gnorm: 321974522746759 
+Iter: 11 prev loss: 315178723 frac: -25.13378 
+	Iter: 11 gnorm: 332185397233468 
+Iter: 12 prev loss: 13081655 frac: 0.9584945 
+	Iter: 12 gnorm: 325679682595941 
+Iter: 13 prev loss: 261147794 frac: -18.9629 
+	Iter: 13 gnorm: 332161956290568 
+Iter: 14 prev loss: 6057638 frac: 0.9768038 
+	Iter: 14 gnorm: 214722645170216 
+Iter: 15 prev loss: 185353886 frac: -29.59838 
+	Iter: 15 gnorm: 332445046907103 
+Iter: 16 prev loss: 36338873 frac: 0.8039487 
+	Iter: 16 gnorm: 332610927893125 
+Iter: 17 prev loss: 171553554 frac: -3.720938 
+	Iter: 17 gnorm: 332472647571176 
+Iter: 18 prev loss: 24069943 frac: 0.8596943 
+	Iter: 18 gnorm: 332548581633675 
+Iter: 19 prev loss: 160709350 frac: -5.676765 
+	Iter: 19 gnorm: 332494335980089 
+Iter: 20 prev loss: 14346436 frac: 0.9107305 
+	Iter: 20 gnorm: 328374194544541 
+TIME_SL: 170.87 18.79 189.679 0 0 
+TIME_SS: 26.75 0.71 27.463 0 0 
+Iter: 1 prev loss: 3465736 frac: 0 
+	Iter: 1 gnorm: 3248119 
+Iter: 2 prev loss: 3476504 frac: -0.0031069 
+	Iter: 2 gnorm: 1430067390040 
+Iter: 3 prev loss: 108734714 frac: -30.27703 
+	Iter: 3 gnorm: 332598285222034 
+Iter: 4 prev loss: 998570077 frac: -8.183544 
+	Iter: 4 gnorm: 330687111696555 
+Iter: 5 prev loss: 170818901 frac: 0.8289365 
+	Iter: 5 gnorm: 332342614049486 
+Iter: 6 prev loss: 493894646 frac: -1.891335 
+	Iter: 6 gnorm: 331827965359841 
+Iter: 7 prev loss: 59590383 frac: 0.879346 
+	Iter: 7 gnorm: 332565071026559 
+Iter: 8 prev loss: 415404918 frac: -5.971006 
+	Iter: 8 gnorm: 331984944814076 
+Iter: 9 prev loss: 3468453 frac: 0.9916504 
+	Iter: 9 gnorm: 361444437960 
+Iter: 10 prev loss: 12060207 frac: -2.477114 
+	Iter: 10 gnorm: 321974525378759 
+Iter: 11 prev loss: 315178724 frac: -25.13377 
+	Iter: 11 gnorm: 332185397203824 
+Iter: 12 prev loss: 13081656 frac: 0.9584945 
+	Iter: 12 gnorm: 325679684644150 
+Iter: 13 prev loss: 261147794 frac: -18.9629 
+	Iter: 13 gnorm: 332161956262073 
+Iter: 14 prev loss: 6057638 frac: 0.9768038 
+	Iter: 14 gnorm: 214722650853384 
+Iter: 15 prev loss: 185353888 frac: -29.59838 
+	Iter: 15 gnorm: 332445046874116 
+Iter: 16 prev loss: 36338871 frac: 0.8039487 
+	Iter: 16 gnorm: 332610927851356 
+Iter: 17 prev loss: 171553556 frac: -3.720938 
+	Iter: 17 gnorm: 332472647538192 
+Iter: 18 prev loss: 24069941 frac: 0.8596943 
+	Iter: 18 gnorm: 332548581554622 
+Iter: 19 prev loss: 160709352 frac: -5.676766 
+	Iter: 19 gnorm: 332494335947129 
+Iter: 20 prev loss: 14346433 frac: 0.9107306 
+	Iter: 20 gnorm: 328374190512752 
+TIME_FL: 129.14 6.44 135.582 0 0 
+TIME_FS: 19.95 0.28 20.226 0 0 
+Iter: 1 prev loss: 3465736 frac: 0 
+	Iter: 1 gnorm: 3248119 
+Iter: 2 prev loss: 3476504 frac: -0.0031069 
+	Iter: 2 gnorm: 1430067390012 
+Iter: 3 prev loss: 108734714 frac: -30.27703 
+	Iter: 3 gnorm: 332598285250278 
+Iter: 4 prev loss: 998570077 frac: -8.183544 
+	Iter: 4 gnorm: 330687111724613 
+Iter: 5 prev loss: 170818901 frac: 0.8289365 
+	Iter: 5 gnorm: 332342614077684 
+Iter: 6 prev loss: 493894646 frac: -1.891335 
+	Iter: 6 gnorm: 331827965388020 
+Iter: 7 prev loss: 59590383 frac: 0.879346 
+	Iter: 7 gnorm: 332565071050798 
+Iter: 8 prev loss: 415404918 frac: -5.971006 
+	Iter: 8 gnorm: 331984944842274 
+Iter: 9 prev loss: 3468453 frac: 0.9916504 
+	Iter: 9 gnorm: 361444400209 
+Iter: 10 prev loss: 12060206 frac: -2.477114 
+	Iter: 10 gnorm: 321974522746759 
+Iter: 11 prev loss: 315178723 frac: -25.13378 
+	Iter: 11 gnorm: 332185397233468 
+Iter: 12 prev loss: 13081655 frac: 0.9584945 
+	Iter: 12 gnorm: 325679682595941 
+Iter: 13 prev loss: 261147794 frac: -18.9629 
+	Iter: 13 gnorm: 332161956290568 
+Iter: 14 prev loss: 6057638 frac: 0.9768038 
+	Iter: 14 gnorm: 214722645170216 
+Iter: 15 prev loss: 185353886 frac: -29.59838 
+	Iter: 15 gnorm: 332445046907103 
+Iter: 16 prev loss: 36338873 frac: 0.8039487 
+	Iter: 16 gnorm: 332610927893125 
+Iter: 17 prev loss: 171553554 frac: -3.720938 
+	Iter: 17 gnorm: 332472647571176 
+Iter: 18 prev loss: 24069943 frac: 0.8596943 
+	Iter: 18 gnorm: 332548581633675 
+Iter: 19 prev loss: 160709350 frac: -5.676765 
+	Iter: 19 gnorm: 332494335980089 
+Iter: 20 prev loss: 14346436 frac: 0.9107305 
+	Iter: 20 gnorm: 328374194544541 
+TIME_SL: 170.83 18.11 188.959 0 0 
+TIME_SS: 27.1 1.28 28.373 0 0 
+Iter: 1 prev loss: 3465736 frac: 0 
+	Iter: 1 gnorm: 3248119 
+Iter: 2 prev loss: 3476504 frac: -0.0031069 
+	Iter: 2 gnorm: 1430067390040 
+Iter: 3 prev loss: 108734714 frac: -30.27703 
+	Iter: 3 gnorm: 332598285222034 
+Iter: 4 prev loss: 998570077 frac: -8.183544 
+	Iter: 4 gnorm: 330687111696555 
+Iter: 5 prev loss: 170818901 frac: 0.8289365 
+	Iter: 5 gnorm: 332342614049486 
+Iter: 6 prev loss: 493894646 frac: -1.891335 
+	Iter: 6 gnorm: 331827965359841 
+Iter: 7 prev loss: 59590383 frac: 0.879346 
+	Iter: 7 gnorm: 332565071026559 
+Iter: 8 prev loss: 415404918 frac: -5.971006 
+	Iter: 8 gnorm: 331984944814076 
+Iter: 9 prev loss: 3468453 frac: 0.9916504 
+	Iter: 9 gnorm: 361444437960 
+Iter: 10 prev loss: 12060207 frac: -2.477114 
+	Iter: 10 gnorm: 321974525378759 
+Iter: 11 prev loss: 315178724 frac: -25.13377 
+	Iter: 11 gnorm: 332185397203824 
+Iter: 12 prev loss: 13081656 frac: 0.9584945 
+	Iter: 12 gnorm: 325679684644150 
+Iter: 13 prev loss: 261147794 frac: -18.9629 
+	Iter: 13 gnorm: 332161956262073 
+Iter: 14 prev loss: 6057638 frac: 0.9768038 
+	Iter: 14 gnorm: 214722650853384 
+Iter: 15 prev loss: 185353888 frac: -29.59838 
+	Iter: 15 gnorm: 332445046874116 
+Iter: 16 prev loss: 36338871 frac: 0.8039487 
+	Iter: 16 gnorm: 332610927851356 
+Iter: 17 prev loss: 171553556 frac: -3.720938 
+	Iter: 17 gnorm: 332472647538192 
+Iter: 18 prev loss: 24069941 frac: 0.8596943 
+	Iter: 18 gnorm: 332548581554622 
+Iter: 19 prev loss: 160709352 frac: -5.676766 
+	Iter: 19 gnorm: 332494335947129 
+Iter: 20 prev loss: 14346433 frac: 0.9107306 
+	Iter: 20 gnorm: 328374190512752 
+TIME_FL: 129.21 5.5 134.719 0 0 
+TIME_FS: 19.86 0 19.864 0 0 
+GEN_DATA: 500000 10000 4 2 
+TIME_J: 2.11 0 2.105 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 21961.5 
+Iter: 2 prev loss: 346574.4 frac: -0.000002238455 
+	Iter: 2 gnorm: 1428464 
+Iter: 3 prev loss: 346583.4 frac: -0.00002609512 
+	Iter: 3 gnorm: 17824738 
+Iter: 4 prev loss: 346613.8 frac: -0.00008756844 
+	Iter: 4 gnorm: 72843044 
+Iter: 5 prev loss: 346638 frac: -0.00006990868 
+	Iter: 5 gnorm: 116766024 
+Iter: 6 prev loss: 346616.1 frac: 0.0000630433 
+	Iter: 6 gnorm: 77153816 
+Iter: 7 prev loss: 346584.7 frac: 0.00009075562 
+	Iter: 7 gnorm: 20128088 
+Iter: 8 prev loss: 346574.5 frac: 0.00002924608 
+	Iter: 8 gnorm: 1751481 
+Iter: 9 prev loss: 346573.6 frac: 0.000002738084 
+	Iter: 9 gnorm: 31039.39 
+Iter: 10 prev loss: 346573.6 frac: 0.00000004939662 
+	Iter: 10 gnorm: 1.619024 
+Iter: 11 prev loss: 346573.6 frac: 0.000000000002553875 
+	Iter: 11 gnorm: 0.01415392 
+Iter: 12 prev loss: 346573.6 frac: 0.00000000000002200169 
+	Iter: 12 gnorm: 0.0004379791 
+Iter: 13 prev loss: 346573.6 frac: 0.0000000000000005038554 
+	Iter: 13 gnorm: 0.0000262005 
+Iter: 14 prev loss: 346573.6 frac: 0 
+	Iter: 14 gnorm: 0.000002400538 
+Iter: 15 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 15 gnorm: 0.0000002982671 
+Iter: 16 prev loss: 346573.6 frac: 0 
+	Iter: 16 gnorm: 0.00000004669575 
+Iter: 17 prev loss: 346573.6 frac: 0 
+	Iter: 17 gnorm: 0.000000008775636 
+Iter: 18 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 18 gnorm: 0.000000001910947 
+Iter: 19 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 19 gnorm: 0.0000000004710594 
+Iter: 20 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 20 gnorm: 0.0000000001286761 
+TIME_SL: 7.21 0.04 7.251 0 0 
+TIME_SS: 1.86 0 1.86 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 21961.5 
+Iter: 2 prev loss: 346574.4 frac: -0.000002238455 
+	Iter: 2 gnorm: 1428464 
+Iter: 3 prev loss: 346583.4 frac: -0.00002609512 
+	Iter: 3 gnorm: 17824738 
+Iter: 4 prev loss: 346613.8 frac: -0.00008756844 
+	Iter: 4 gnorm: 72843044 
+Iter: 5 prev loss: 346638 frac: -0.00006990868 
+	Iter: 5 gnorm: 116766024 
+Iter: 6 prev loss: 346616.1 frac: 0.0000630433 
+	Iter: 6 gnorm: 77153816 
+Iter: 7 prev loss: 346584.7 frac: 0.00009075562 
+	Iter: 7 gnorm: 20128088 
+Iter: 8 prev loss: 346574.5 frac: 0.00002924608 
+	Iter: 8 gnorm: 1751481 
+Iter: 9 prev loss: 346573.6 frac: 0.000002738084 
+	Iter: 9 gnorm: 31039.39 
+Iter: 10 prev loss: 346573.6 frac: 0.00000004939662 
+	Iter: 10 gnorm: 1.619024 
+Iter: 11 prev loss: 346573.6 frac: 0.000000000002553875 
+	Iter: 11 gnorm: 0.01415392 
+Iter: 12 prev loss: 346573.6 frac: 0.00000000000002183374 
+	Iter: 12 gnorm: 0.0004379795 
+Iter: 13 prev loss: 346573.6 frac: 0.0000000000000006718073 
+	Iter: 13 gnorm: 0.00002620036 
+Iter: 14 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 14 gnorm: 0.000002400536 
+Iter: 15 prev loss: 346573.6 frac: 0 
+	Iter: 15 gnorm: 0.0000002982828 
+Iter: 16 prev loss: 346573.6 frac: 0 
+	Iter: 16 gnorm: 0.00000004669738 
+Iter: 17 prev loss: 346573.6 frac: 0 
+	Iter: 17 gnorm: 0.000000008773179 
+Iter: 18 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 18 gnorm: 0.000000001910999 
+Iter: 19 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 19 gnorm: 0.0000000004709714 
+Iter: 20 prev loss: 346573.6 frac: 0 
+	Iter: 20 gnorm: 0.0000000001288207 
+TIME_FL: 11.31 0.06 11.366 0 0 
+TIME_FS: 1.95 0 1.945 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 21961.5 
+Iter: 2 prev loss: 346574.4 frac: -0.000002238455 
+	Iter: 2 gnorm: 1428464 
+Iter: 3 prev loss: 346583.4 frac: -0.00002609512 
+	Iter: 3 gnorm: 17824738 
+Iter: 4 prev loss: 346613.8 frac: -0.00008756844 
+	Iter: 4 gnorm: 72843044 
+Iter: 5 prev loss: 346638 frac: -0.00006990868 
+	Iter: 5 gnorm: 116766024 
+Iter: 6 prev loss: 346616.1 frac: 0.0000630433 
+	Iter: 6 gnorm: 77153816 
+Iter: 7 prev loss: 346584.7 frac: 0.00009075562 
+	Iter: 7 gnorm: 20128088 
+Iter: 8 prev loss: 346574.5 frac: 0.00002924608 
+	Iter: 8 gnorm: 1751481 
+Iter: 9 prev loss: 346573.6 frac: 0.000002738084 
+	Iter: 9 gnorm: 31039.39 
+Iter: 10 prev loss: 346573.6 frac: 0.00000004939662 
+	Iter: 10 gnorm: 1.619024 
+Iter: 11 prev loss: 346573.6 frac: 0.000000000002553875 
+	Iter: 11 gnorm: 0.01415392 
+Iter: 12 prev loss: 346573.6 frac: 0.00000000000002200169 
+	Iter: 12 gnorm: 0.0004379791 
+Iter: 13 prev loss: 346573.6 frac: 0.0000000000000005038554 
+	Iter: 13 gnorm: 0.0000262005 
+Iter: 14 prev loss: 346573.6 frac: 0 
+	Iter: 14 gnorm: 0.000002400538 
+Iter: 15 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 15 gnorm: 0.0000002982671 
+Iter: 16 prev loss: 346573.6 frac: 0 
+	Iter: 16 gnorm: 0.00000004669575 
+Iter: 17 prev loss: 346573.6 frac: 0 
+	Iter: 17 gnorm: 0.000000008775636 
+Iter: 18 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 18 gnorm: 0.000000001910947 
+Iter: 19 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 19 gnorm: 0.0000000004710594 
+Iter: 20 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 20 gnorm: 0.0000000001286761 
+TIME_SL: 6.89 0.01 6.908 0 0 
+TIME_SS: 1.87 0 1.862 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 21961.5 
+Iter: 2 prev loss: 346574.4 frac: -0.000002238455 
+	Iter: 2 gnorm: 1428464 
+Iter: 3 prev loss: 346583.4 frac: -0.00002609512 
+	Iter: 3 gnorm: 17824738 
+Iter: 4 prev loss: 346613.8 frac: -0.00008756844 
+	Iter: 4 gnorm: 72843044 
+Iter: 5 prev loss: 346638 frac: -0.00006990868 
+	Iter: 5 gnorm: 116766024 
+Iter: 6 prev loss: 346616.1 frac: 0.0000630433 
+	Iter: 6 gnorm: 77153816 
+Iter: 7 prev loss: 346584.7 frac: 0.00009075562 
+	Iter: 7 gnorm: 20128088 
+Iter: 8 prev loss: 346574.5 frac: 0.00002924608 
+	Iter: 8 gnorm: 1751481 
+Iter: 9 prev loss: 346573.6 frac: 0.000002738084 
+	Iter: 9 gnorm: 31039.39 
+Iter: 10 prev loss: 346573.6 frac: 0.00000004939662 
+	Iter: 10 gnorm: 1.619024 
+Iter: 11 prev loss: 346573.6 frac: 0.000000000002553875 
+	Iter: 11 gnorm: 0.01415392 
+Iter: 12 prev loss: 346573.6 frac: 0.00000000000002183374 
+	Iter: 12 gnorm: 0.0004379795 
+Iter: 13 prev loss: 346573.6 frac: 0.0000000000000006718073 
+	Iter: 13 gnorm: 0.00002620036 
+Iter: 14 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 14 gnorm: 0.000002400536 
+Iter: 15 prev loss: 346573.6 frac: 0 
+	Iter: 15 gnorm: 0.0000002982828 
+Iter: 16 prev loss: 346573.6 frac: 0 
+	Iter: 16 gnorm: 0.00000004669738 
+Iter: 17 prev loss: 346573.6 frac: 0 
+	Iter: 17 gnorm: 0.000000008773179 
+Iter: 18 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 18 gnorm: 0.000000001910999 
+Iter: 19 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 19 gnorm: 0.0000000004709714 
+Iter: 20 prev loss: 346573.6 frac: 0 
+	Iter: 20 gnorm: 0.0000000001288207 
+TIME_FL: 11.6 0.51 12.118 0 0 
+TIME_FS: 1.95 0.03 1.975 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 21961.5 
+Iter: 2 prev loss: 346574.4 frac: -0.000002238455 
+	Iter: 2 gnorm: 1428464 
+Iter: 3 prev loss: 346583.4 frac: -0.00002609512 
+	Iter: 3 gnorm: 17824738 
+Iter: 4 prev loss: 346613.8 frac: -0.00008756844 
+	Iter: 4 gnorm: 72843044 
+Iter: 5 prev loss: 346638 frac: -0.00006990868 
+	Iter: 5 gnorm: 116766024 
+Iter: 6 prev loss: 346616.1 frac: 0.0000630433 
+	Iter: 6 gnorm: 77153816 
+Iter: 7 prev loss: 346584.7 frac: 0.00009075562 
+	Iter: 7 gnorm: 20128088 
+Iter: 8 prev loss: 346574.5 frac: 0.00002924608 
+	Iter: 8 gnorm: 1751481 
+Iter: 9 prev loss: 346573.6 frac: 0.000002738084 
+	Iter: 9 gnorm: 31039.39 
+Iter: 10 prev loss: 346573.6 frac: 0.00000004939662 
+	Iter: 10 gnorm: 1.619024 
+Iter: 11 prev loss: 346573.6 frac: 0.000000000002553875 
+	Iter: 11 gnorm: 0.01415392 
+Iter: 12 prev loss: 346573.6 frac: 0.00000000000002200169 
+	Iter: 12 gnorm: 0.0004379791 
+Iter: 13 prev loss: 346573.6 frac: 0.0000000000000005038554 
+	Iter: 13 gnorm: 0.0000262005 
+Iter: 14 prev loss: 346573.6 frac: 0 
+	Iter: 14 gnorm: 0.000002400538 
+Iter: 15 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 15 gnorm: 0.0000002982671 
+Iter: 16 prev loss: 346573.6 frac: 0 
+	Iter: 16 gnorm: 0.00000004669575 
+Iter: 17 prev loss: 346573.6 frac: 0 
+	Iter: 17 gnorm: 0.000000008775636 
+Iter: 18 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 18 gnorm: 0.000000001910947 
+Iter: 19 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 19 gnorm: 0.0000000004710594 
+Iter: 20 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 20 gnorm: 0.0000000001286761 
+TIME_SL: 6.93 0.29 7.224 0 0 
+TIME_SS: 1.88 0.02 1.897 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 21961.5 
+Iter: 2 prev loss: 346574.4 frac: -0.000002238455 
+	Iter: 2 gnorm: 1428464 
+Iter: 3 prev loss: 346583.4 frac: -0.00002609512 
+	Iter: 3 gnorm: 17824738 
+Iter: 4 prev loss: 346613.8 frac: -0.00008756844 
+	Iter: 4 gnorm: 72843044 
+Iter: 5 prev loss: 346638 frac: -0.00006990868 
+	Iter: 5 gnorm: 116766024 
+Iter: 6 prev loss: 346616.1 frac: 0.0000630433 
+	Iter: 6 gnorm: 77153816 
+Iter: 7 prev loss: 346584.7 frac: 0.00009075562 
+	Iter: 7 gnorm: 20128088 
+Iter: 8 prev loss: 346574.5 frac: 0.00002924608 
+	Iter: 8 gnorm: 1751481 
+Iter: 9 prev loss: 346573.6 frac: 0.000002738084 
+	Iter: 9 gnorm: 31039.39 
+Iter: 10 prev loss: 346573.6 frac: 0.00000004939662 
+	Iter: 10 gnorm: 1.619024 
+Iter: 11 prev loss: 346573.6 frac: 0.000000000002553875 
+	Iter: 11 gnorm: 0.01415392 
+Iter: 12 prev loss: 346573.6 frac: 0.00000000000002183374 
+	Iter: 12 gnorm: 0.0004379795 
+Iter: 13 prev loss: 346573.6 frac: 0.0000000000000006718073 
+	Iter: 13 gnorm: 0.00002620036 
+Iter: 14 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 14 gnorm: 0.000002400536 
+Iter: 15 prev loss: 346573.6 frac: 0 
+	Iter: 15 gnorm: 0.0000002982828 
+Iter: 16 prev loss: 346573.6 frac: 0 
+	Iter: 16 gnorm: 0.00000004669738 
+Iter: 17 prev loss: 346573.6 frac: 0 
+	Iter: 17 gnorm: 0.000000008773179 
+Iter: 18 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 18 gnorm: 0.000000001910999 
+Iter: 19 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 19 gnorm: 0.0000000004709714 
+Iter: 20 prev loss: 346573.6 frac: 0 
+	Iter: 20 gnorm: 0.0000000001288207 
+TIME_FL: 11.39 0.8 12.192 0 0 
+TIME_FS: 1.95 0 1.947 0 0 
+GEN_DATA: 500000 10000 4 4 
+TIME_J: 2.24 0 2.243 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 50181.12 
+Iter: 2 prev loss: 346576.1 frac: -0.000007304744 
+	Iter: 2 gnorm: 6171626 
+Iter: 3 prev loss: 346638.5 frac: -0.0001800696 
+	Iter: 3 gnorm: 157054289 
+Iter: 4 prev loss: 347169.6 frac: -0.001532097 
+	Iter: 4 gnorm: 1439487385 
+Iter: 5 prev loss: 349002.9 frac: -0.005280629 
+	Iter: 5 gnorm: 5845816347 
+Iter: 6 prev loss: 351397 frac: -0.006859902 
+	Iter: 6 gnorm: 11550490848 
+Iter: 7 prev loss: 351416.5 frac: -0.00005544904 
+	Iter: 7 gnorm: 11597938411 
+Iter: 8 prev loss: 349060.7 frac: 0.006703578 
+	Iter: 8 gnorm: 5983904984 
+Iter: 9 prev loss: 347211.7 frac: 0.005297266 
+	Iter: 9 gnorm: 1541014586 
+Iter: 10 prev loss: 346648.3 frac: 0.00162252 
+	Iter: 10 gnorm: 180727861 
+Iter: 11 prev loss: 346576.8 frac: 0.0002062403 
+	Iter: 11 gnorm: 7886396 
+Iter: 12 prev loss: 346573.6 frac: 0.00000931837 
+	Iter: 12 gnorm: 77431.25 
+Iter: 13 prev loss: 346573.6 frac: 0.00000009239324 
+	Iter: 13 gnorm: 4.355241 
+Iter: 14 prev loss: 346573.6 frac: 0.000000000005171572 
+	Iter: 14 gnorm: 0.02134073 
+Iter: 15 prev loss: 346573.6 frac: 0.00000000000002502482 
+	Iter: 15 gnorm: 0.0003972102 
+Iter: 16 prev loss: 346573.6 frac: 0.0000000000000005038555 
+	Iter: 16 gnorm: 0.00001494939 
+Iter: 17 prev loss: 346573.6 frac: 0 
+	Iter: 17 gnorm: 0.000000892771 
+Iter: 18 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 18 gnorm: 0.00000007447418 
+Iter: 19 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 19 gnorm: 0.000000008028422 
+Iter: 20 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 20 gnorm: 0.000000001061515 
+TIME_SL: 7.39 0 7.394 0 0 
+TIME_SS: 1.89 0 1.892 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 50181.12 
+Iter: 2 prev loss: 346576.1 frac: -0.000007304744 
+	Iter: 2 gnorm: 6171626 
+Iter: 3 prev loss: 346638.5 frac: -0.0001800696 
+	Iter: 3 gnorm: 157054289 
+Iter: 4 prev loss: 347169.6 frac: -0.001532097 
+	Iter: 4 gnorm: 1439487385 
+Iter: 5 prev loss: 349002.9 frac: -0.005280629 
+	Iter: 5 gnorm: 5845816347 
+Iter: 6 prev loss: 351397 frac: -0.006859902 
+	Iter: 6 gnorm: 11550490848 
+Iter: 7 prev loss: 351416.5 frac: -0.00005544904 
+	Iter: 7 gnorm: 11597938411 
+Iter: 8 prev loss: 349060.7 frac: 0.006703578 
+	Iter: 8 gnorm: 5983904984 
+Iter: 9 prev loss: 347211.7 frac: 0.005297266 
+	Iter: 9 gnorm: 1541014586 
+Iter: 10 prev loss: 346648.3 frac: 0.00162252 
+	Iter: 10 gnorm: 180727861 
+Iter: 11 prev loss: 346576.8 frac: 0.0002062403 
+	Iter: 11 gnorm: 7886396 
+Iter: 12 prev loss: 346573.6 frac: 0.00000931837 
+	Iter: 12 gnorm: 77431.25 
+Iter: 13 prev loss: 346573.6 frac: 0.00000009239324 
+	Iter: 13 gnorm: 4.355241 
+Iter: 14 prev loss: 346573.6 frac: 0.000000000005171572 
+	Iter: 14 gnorm: 0.02134073 
+Iter: 15 prev loss: 346573.6 frac: 0.00000000000002485687 
+	Iter: 15 gnorm: 0.00039721 
+Iter: 16 prev loss: 346573.6 frac: 0.0000000000000005038555 
+	Iter: 16 gnorm: 0.00001494941 
+Iter: 17 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 17 gnorm: 0.0000008927687 
+Iter: 18 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 18 gnorm: 0.0000000744742 
+Iter: 19 prev loss: 346573.6 frac: 0 
+	Iter: 19 gnorm: 0.000000008028429 
+Iter: 20 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 20 gnorm: 0.000000001061797 
+TIME_FL: 11.2 0 11.199 0 0 
+TIME_FS: 1.94 0 1.941 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 50181.12 
+Iter: 2 prev loss: 346576.1 frac: -0.000007304744 
+	Iter: 2 gnorm: 6171626 
+Iter: 3 prev loss: 346638.5 frac: -0.0001800696 
+	Iter: 3 gnorm: 157054289 
+Iter: 4 prev loss: 347169.6 frac: -0.001532097 
+	Iter: 4 gnorm: 1439487385 
+Iter: 5 prev loss: 349002.9 frac: -0.005280629 
+	Iter: 5 gnorm: 5845816347 
+Iter: 6 prev loss: 351397 frac: -0.006859902 
+	Iter: 6 gnorm: 11550490848 
+Iter: 7 prev loss: 351416.5 frac: -0.00005544904 
+	Iter: 7 gnorm: 11597938411 
+Iter: 8 prev loss: 349060.7 frac: 0.006703578 
+	Iter: 8 gnorm: 5983904984 
+Iter: 9 prev loss: 347211.7 frac: 0.005297266 
+	Iter: 9 gnorm: 1541014586 
+Iter: 10 prev loss: 346648.3 frac: 0.00162252 
+	Iter: 10 gnorm: 180727861 
+Iter: 11 prev loss: 346576.8 frac: 0.0002062403 
+	Iter: 11 gnorm: 7886396 
+Iter: 12 prev loss: 346573.6 frac: 0.00000931837 
+	Iter: 12 gnorm: 77431.25 
+Iter: 13 prev loss: 346573.6 frac: 0.00000009239324 
+	Iter: 13 gnorm: 4.355241 
+Iter: 14 prev loss: 346573.6 frac: 0.000000000005171572 
+	Iter: 14 gnorm: 0.02134073 
+Iter: 15 prev loss: 346573.6 frac: 0.00000000000002502482 
+	Iter: 15 gnorm: 0.0003972102 
+Iter: 16 prev loss: 346573.6 frac: 0.0000000000000005038555 
+	Iter: 16 gnorm: 0.00001494939 
+Iter: 17 prev loss: 346573.6 frac: 0 
+	Iter: 17 gnorm: 0.000000892771 
+Iter: 18 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 18 gnorm: 0.00000007447418 
+Iter: 19 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 19 gnorm: 0.000000008028422 
+Iter: 20 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 20 gnorm: 0.000000001061515 
+TIME_SL: 7.38 0 7.379 0 0 
+TIME_SS: 1.9 0 1.893 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 50181.12 
+Iter: 2 prev loss: 346576.1 frac: -0.000007304744 
+	Iter: 2 gnorm: 6171626 
+Iter: 3 prev loss: 346638.5 frac: -0.0001800696 
+	Iter: 3 gnorm: 157054289 
+Iter: 4 prev loss: 347169.6 frac: -0.001532097 
+	Iter: 4 gnorm: 1439487385 
+Iter: 5 prev loss: 349002.9 frac: -0.005280629 
+	Iter: 5 gnorm: 5845816347 
+Iter: 6 prev loss: 351397 frac: -0.006859902 
+	Iter: 6 gnorm: 11550490848 
+Iter: 7 prev loss: 351416.5 frac: -0.00005544904 
+	Iter: 7 gnorm: 11597938411 
+Iter: 8 prev loss: 349060.7 frac: 0.006703578 
+	Iter: 8 gnorm: 5983904984 
+Iter: 9 prev loss: 347211.7 frac: 0.005297266 
+	Iter: 9 gnorm: 1541014586 
+Iter: 10 prev loss: 346648.3 frac: 0.00162252 
+	Iter: 10 gnorm: 180727861 
+Iter: 11 prev loss: 346576.8 frac: 0.0002062403 
+	Iter: 11 gnorm: 7886396 
+Iter: 12 prev loss: 346573.6 frac: 0.00000931837 
+	Iter: 12 gnorm: 77431.25 
+Iter: 13 prev loss: 346573.6 frac: 0.00000009239324 
+	Iter: 13 gnorm: 4.355241 
+Iter: 14 prev loss: 346573.6 frac: 0.000000000005171572 
+	Iter: 14 gnorm: 0.02134073 
+Iter: 15 prev loss: 346573.6 frac: 0.00000000000002485687 
+	Iter: 15 gnorm: 0.00039721 
+Iter: 16 prev loss: 346573.6 frac: 0.0000000000000005038555 
+	Iter: 16 gnorm: 0.00001494941 
+Iter: 17 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 17 gnorm: 0.0000008927687 
+Iter: 18 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 18 gnorm: 0.0000000744742 
+Iter: 19 prev loss: 346573.6 frac: 0 
+	Iter: 19 gnorm: 0.000000008028429 
+Iter: 20 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 20 gnorm: 0.000000001061797 
+TIME_FL: 11.37 0.02 11.39 0 0 
+TIME_FS: 1.94 0 1.948 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 50181.12 
+Iter: 2 prev loss: 346576.1 frac: -0.000007304744 
+	Iter: 2 gnorm: 6171626 
+Iter: 3 prev loss: 346638.5 frac: -0.0001800696 
+	Iter: 3 gnorm: 157054289 
+Iter: 4 prev loss: 347169.6 frac: -0.001532097 
+	Iter: 4 gnorm: 1439487385 
+Iter: 5 prev loss: 349002.9 frac: -0.005280629 
+	Iter: 5 gnorm: 5845816347 
+Iter: 6 prev loss: 351397 frac: -0.006859902 
+	Iter: 6 gnorm: 11550490848 
+Iter: 7 prev loss: 351416.5 frac: -0.00005544904 
+	Iter: 7 gnorm: 11597938411 
+Iter: 8 prev loss: 349060.7 frac: 0.006703578 
+	Iter: 8 gnorm: 5983904984 
+Iter: 9 prev loss: 347211.7 frac: 0.005297266 
+	Iter: 9 gnorm: 1541014586 
+Iter: 10 prev loss: 346648.3 frac: 0.00162252 
+	Iter: 10 gnorm: 180727861 
+Iter: 11 prev loss: 346576.8 frac: 0.0002062403 
+	Iter: 11 gnorm: 7886396 
+Iter: 12 prev loss: 346573.6 frac: 0.00000931837 
+	Iter: 12 gnorm: 77431.25 
+Iter: 13 prev loss: 346573.6 frac: 0.00000009239324 
+	Iter: 13 gnorm: 4.355241 
+Iter: 14 prev loss: 346573.6 frac: 0.000000000005171572 
+	Iter: 14 gnorm: 0.02134073 
+Iter: 15 prev loss: 346573.6 frac: 0.00000000000002502482 
+	Iter: 15 gnorm: 0.0003972102 
+Iter: 16 prev loss: 346573.6 frac: 0.0000000000000005038555 
+	Iter: 16 gnorm: 0.00001494939 
+Iter: 17 prev loss: 346573.6 frac: 0 
+	Iter: 17 gnorm: 0.000000892771 
+Iter: 18 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 18 gnorm: 0.00000007447418 
+Iter: 19 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 19 gnorm: 0.000000008028422 
+Iter: 20 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 20 gnorm: 0.000000001061515 
+TIME_SL: 7.41 0 7.404 0 0 
+TIME_SS: 1.89 0 1.895 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 50181.12 
+Iter: 2 prev loss: 346576.1 frac: -0.000007304744 
+	Iter: 2 gnorm: 6171626 
+Iter: 3 prev loss: 346638.5 frac: -0.0001800696 
+	Iter: 3 gnorm: 157054289 
+Iter: 4 prev loss: 347169.6 frac: -0.001532097 
+	Iter: 4 gnorm: 1439487385 
+Iter: 5 prev loss: 349002.9 frac: -0.005280629 
+	Iter: 5 gnorm: 5845816347 
+Iter: 6 prev loss: 351397 frac: -0.006859902 
+	Iter: 6 gnorm: 11550490848 
+Iter: 7 prev loss: 351416.5 frac: -0.00005544904 
+	Iter: 7 gnorm: 11597938411 
+Iter: 8 prev loss: 349060.7 frac: 0.006703578 
+	Iter: 8 gnorm: 5983904984 
+Iter: 9 prev loss: 347211.7 frac: 0.005297266 
+	Iter: 9 gnorm: 1541014586 
+Iter: 10 prev loss: 346648.3 frac: 0.00162252 
+	Iter: 10 gnorm: 180727861 
+Iter: 11 prev loss: 346576.8 frac: 0.0002062403 
+	Iter: 11 gnorm: 7886396 
+Iter: 12 prev loss: 346573.6 frac: 0.00000931837 
+	Iter: 12 gnorm: 77431.25 
+Iter: 13 prev loss: 346573.6 frac: 0.00000009239324 
+	Iter: 13 gnorm: 4.355241 
+Iter: 14 prev loss: 346573.6 frac: 0.000000000005171572 
+	Iter: 14 gnorm: 0.02134073 
+Iter: 15 prev loss: 346573.6 frac: 0.00000000000002485687 
+	Iter: 15 gnorm: 0.00039721 
+Iter: 16 prev loss: 346573.6 frac: 0.0000000000000005038555 
+	Iter: 16 gnorm: 0.00001494941 
+Iter: 17 prev loss: 346573.6 frac: -0.0000000000000001679518 
+	Iter: 17 gnorm: 0.0000008927687 
+Iter: 18 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 18 gnorm: 0.0000000744742 
+Iter: 19 prev loss: 346573.6 frac: 0 
+	Iter: 19 gnorm: 0.000000008028429 
+Iter: 20 prev loss: 346573.6 frac: 0.0000000000000001679518 
+	Iter: 20 gnorm: 0.000000001061797 
+TIME_FL: 11.2 0 11.2 0 0 
+TIME_FS: 2.13 0 2.127 0 0 
+GEN_DATA: 500000 10000 4 20 
+TIME_J: 2.53 0 2.531 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 3239586 
+Iter: 2 prev loss: 347128.8 frac: -0.001601959 
+	Iter: 2 gnorm: 4028030900 
+Iter: 3 prev loss: 494621.6 frac: -0.4248937 
+	Iter: 3 gnorm: 811815351912 
+Iter: 4 prev loss: 3634392 frac: -6.347823 
+	Iter: 4 gnorm: 1802881378916 
+Iter: 5 prev loss: 894992.3 frac: 0.7537436 
+	Iter: 5 gnorm: 1614750109680 
+Iter: 6 prev loss: 2539324 frac: -1.837257 
+	Iter: 6 gnorm: 1804799853897 
+Iter: 7 prev loss: 543047.6 frac: 0.7861448 
+	Iter: 7 gnorm: 988879666305 
+Iter: 8 prev loss: 1440930 frac: -1.653414 
+	Iter: 8 gnorm: 1784757623681 
+Iter: 9 prev loss: 828168 frac: 0.4252545 
+	Iter: 9 gnorm: 1552636521548 
+Iter: 10 prev loss: 1062830 frac: -0.2833503 
+	Iter: 10 gnorm: 1705529744477 
+Iter: 11 prev loss: 732172 frac: 0.3111107 
+	Iter: 11 gnorm: 1428636235394 
+Iter: 12 prev loss: 783813.4 frac: -0.07053175 
+	Iter: 12 gnorm: 1494965858460 
+Iter: 13 prev loss: 653253.9 frac: 0.1665696 
+	Iter: 13 gnorm: 1284275653431 
+Iter: 14 prev loss: 612590.4 frac: 0.06224763 
+	Iter: 14 gnorm: 1186000333775 
+Iter: 15 prev loss: 552312.4 frac: 0.09839849 
+	Iter: 15 gnorm: 1019021733281 
+Iter: 16 prev loss: 506342.7 frac: 0.08323136 
+	Iter: 16 gnorm: 855512708083 
+Iter: 17 prev loss: 464678.2 frac: 0.08228514 
+	Iter: 17 gnorm: 683897997644 
+Iter: 18 prev loss: 430546.5 frac: 0.07345229 
+	Iter: 18 gnorm: 517103750657 
+Iter: 19 prev loss: 402154.4 frac: 0.06594431 
+	Iter: 19 gnorm: 361989054726 
+Iter: 20 prev loss: 380549.2 frac: 0.05372375 
+	Iter: 20 gnorm: 230415779362 
+TIME_SL: 11.57 0 11.566 0 0 
+TIME_SS: 2.18 0 2.183 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 3239586 
+Iter: 2 prev loss: 347128.8 frac: -0.001601959 
+	Iter: 2 gnorm: 4028030900 
+Iter: 3 prev loss: 494621.6 frac: -0.4248937 
+	Iter: 3 gnorm: 811815351912 
+Iter: 4 prev loss: 3634392 frac: -6.347823 
+	Iter: 4 gnorm: 1802881378909 
+Iter: 5 prev loss: 894992.3 frac: 0.7537436 
+	Iter: 5 gnorm: 1614750109652 
+Iter: 6 prev loss: 2539324 frac: -1.837257 
+	Iter: 6 gnorm: 1804799853920 
+Iter: 7 prev loss: 543047.6 frac: 0.7861448 
+	Iter: 7 gnorm: 988879666409 
+Iter: 8 prev loss: 1440930 frac: -1.653414 
+	Iter: 8 gnorm: 1784757623673 
+Iter: 9 prev loss: 828168 frac: 0.4252545 
+	Iter: 9 gnorm: 1552636521492 
+Iter: 10 prev loss: 1062830 frac: -0.2833503 
+	Iter: 10 gnorm: 1705529744510 
+Iter: 11 prev loss: 732172 frac: 0.3111107 
+	Iter: 11 gnorm: 1428636235363 
+Iter: 12 prev loss: 783813.4 frac: -0.07053175 
+	Iter: 12 gnorm: 1494965858479 
+Iter: 13 prev loss: 653253.9 frac: 0.1665696 
+	Iter: 13 gnorm: 1284275653445 
+Iter: 14 prev loss: 612590.4 frac: 0.06224763 
+	Iter: 14 gnorm: 1186000333782 
+Iter: 15 prev loss: 552312.4 frac: 0.09839849 
+	Iter: 15 gnorm: 1019021733290 
+Iter: 16 prev loss: 506342.7 frac: 0.08323136 
+	Iter: 16 gnorm: 855512708083 
+Iter: 17 prev loss: 464678.2 frac: 0.08228514 
+	Iter: 17 gnorm: 683897997640 
+Iter: 18 prev loss: 430546.5 frac: 0.07345229 
+	Iter: 18 gnorm: 517103750638 
+Iter: 19 prev loss: 402154.4 frac: 0.06594431 
+	Iter: 19 gnorm: 361989054711 
+Iter: 20 prev loss: 380549.2 frac: 0.05372375 
+	Iter: 20 gnorm: 230415779356 
+TIME_FL: 11.57 0 11.575 0 0 
+TIME_FS: 1.96 0 1.952 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 3239586 
+Iter: 2 prev loss: 347128.8 frac: -0.001601959 
+	Iter: 2 gnorm: 4028030900 
+Iter: 3 prev loss: 494621.6 frac: -0.4248937 
+	Iter: 3 gnorm: 811815351912 
+Iter: 4 prev loss: 3634392 frac: -6.347823 
+	Iter: 4 gnorm: 1802881378916 
+Iter: 5 prev loss: 894992.3 frac: 0.7537436 
+	Iter: 5 gnorm: 1614750109680 
+Iter: 6 prev loss: 2539324 frac: -1.837257 
+	Iter: 6 gnorm: 1804799853897 
+Iter: 7 prev loss: 543047.6 frac: 0.7861448 
+	Iter: 7 gnorm: 988879666305 
+Iter: 8 prev loss: 1440930 frac: -1.653414 
+	Iter: 8 gnorm: 1784757623681 
+Iter: 9 prev loss: 828168 frac: 0.4252545 
+	Iter: 9 gnorm: 1552636521548 
+Iter: 10 prev loss: 1062830 frac: -0.2833503 
+	Iter: 10 gnorm: 1705529744477 
+Iter: 11 prev loss: 732172 frac: 0.3111107 
+	Iter: 11 gnorm: 1428636235394 
+Iter: 12 prev loss: 783813.4 frac: -0.07053175 
+	Iter: 12 gnorm: 1494965858460 
+Iter: 13 prev loss: 653253.9 frac: 0.1665696 
+	Iter: 13 gnorm: 1284275653431 
+Iter: 14 prev loss: 612590.4 frac: 0.06224763 
+	Iter: 14 gnorm: 1186000333775 
+Iter: 15 prev loss: 552312.4 frac: 0.09839849 
+	Iter: 15 gnorm: 1019021733281 
+Iter: 16 prev loss: 506342.7 frac: 0.08323136 
+	Iter: 16 gnorm: 855512708083 
+Iter: 17 prev loss: 464678.2 frac: 0.08228514 
+	Iter: 17 gnorm: 683897997644 
+Iter: 18 prev loss: 430546.5 frac: 0.07345229 
+	Iter: 18 gnorm: 517103750657 
+Iter: 19 prev loss: 402154.4 frac: 0.06594431 
+	Iter: 19 gnorm: 361989054726 
+Iter: 20 prev loss: 380549.2 frac: 0.05372375 
+	Iter: 20 gnorm: 230415779362 
+TIME_SL: 11.54 0.02 11.565 0 0 
+TIME_SS: 2.19 0 2.186 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 3239586 
+Iter: 2 prev loss: 347128.8 frac: -0.001601959 
+	Iter: 2 gnorm: 4028030900 
+Iter: 3 prev loss: 494621.6 frac: -0.4248937 
+	Iter: 3 gnorm: 811815351912 
+Iter: 4 prev loss: 3634392 frac: -6.347823 
+	Iter: 4 gnorm: 1802881378909 
+Iter: 5 prev loss: 894992.3 frac: 0.7537436 
+	Iter: 5 gnorm: 1614750109652 
+Iter: 6 prev loss: 2539324 frac: -1.837257 
+	Iter: 6 gnorm: 1804799853920 
+Iter: 7 prev loss: 543047.6 frac: 0.7861448 
+	Iter: 7 gnorm: 988879666409 
+Iter: 8 prev loss: 1440930 frac: -1.653414 
+	Iter: 8 gnorm: 1784757623673 
+Iter: 9 prev loss: 828168 frac: 0.4252545 
+	Iter: 9 gnorm: 1552636521492 
+Iter: 10 prev loss: 1062830 frac: -0.2833503 
+	Iter: 10 gnorm: 1705529744510 
+Iter: 11 prev loss: 732172 frac: 0.3111107 
+	Iter: 11 gnorm: 1428636235363 
+Iter: 12 prev loss: 783813.4 frac: -0.07053175 
+	Iter: 12 gnorm: 1494965858479 
+Iter: 13 prev loss: 653253.9 frac: 0.1665696 
+	Iter: 13 gnorm: 1284275653445 
+Iter: 14 prev loss: 612590.4 frac: 0.06224763 
+	Iter: 14 gnorm: 1186000333782 
+Iter: 15 prev loss: 552312.4 frac: 0.09839849 
+	Iter: 15 gnorm: 1019021733290 
+Iter: 16 prev loss: 506342.7 frac: 0.08323136 
+	Iter: 16 gnorm: 855512708083 
+Iter: 17 prev loss: 464678.2 frac: 0.08228514 
+	Iter: 17 gnorm: 683897997640 
+Iter: 18 prev loss: 430546.5 frac: 0.07345229 
+	Iter: 18 gnorm: 517103750638 
+Iter: 19 prev loss: 402154.4 frac: 0.06594431 
+	Iter: 19 gnorm: 361989054711 
+Iter: 20 prev loss: 380549.2 frac: 0.05372375 
+	Iter: 20 gnorm: 230415779356 
+TIME_FL: 11.4 0 11.401 0 0 
+TIME_FS: 2.13 0 2.126 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 3239586 
+Iter: 2 prev loss: 347128.8 frac: -0.001601959 
+	Iter: 2 gnorm: 4028030900 
+Iter: 3 prev loss: 494621.6 frac: -0.4248937 
+	Iter: 3 gnorm: 811815351912 
+Iter: 4 prev loss: 3634392 frac: -6.347823 
+	Iter: 4 gnorm: 1802881378916 
+Iter: 5 prev loss: 894992.3 frac: 0.7537436 
+	Iter: 5 gnorm: 1614750109680 
+Iter: 6 prev loss: 2539324 frac: -1.837257 
+	Iter: 6 gnorm: 1804799853897 
+Iter: 7 prev loss: 543047.6 frac: 0.7861448 
+	Iter: 7 gnorm: 988879666305 
+Iter: 8 prev loss: 1440930 frac: -1.653414 
+	Iter: 8 gnorm: 1784757623681 
+Iter: 9 prev loss: 828168 frac: 0.4252545 
+	Iter: 9 gnorm: 1552636521548 
+Iter: 10 prev loss: 1062830 frac: -0.2833503 
+	Iter: 10 gnorm: 1705529744477 
+Iter: 11 prev loss: 732172 frac: 0.3111107 
+	Iter: 11 gnorm: 1428636235394 
+Iter: 12 prev loss: 783813.4 frac: -0.07053175 
+	Iter: 12 gnorm: 1494965858460 
+Iter: 13 prev loss: 653253.9 frac: 0.1665696 
+	Iter: 13 gnorm: 1284275653431 
+Iter: 14 prev loss: 612590.4 frac: 0.06224763 
+	Iter: 14 gnorm: 1186000333775 
+Iter: 15 prev loss: 552312.4 frac: 0.09839849 
+	Iter: 15 gnorm: 1019021733281 
+Iter: 16 prev loss: 506342.7 frac: 0.08323136 
+	Iter: 16 gnorm: 855512708083 
+Iter: 17 prev loss: 464678.2 frac: 0.08228514 
+	Iter: 17 gnorm: 683897997644 
+Iter: 18 prev loss: 430546.5 frac: 0.07345229 
+	Iter: 18 gnorm: 517103750657 
+Iter: 19 prev loss: 402154.4 frac: 0.06594431 
+	Iter: 19 gnorm: 361989054726 
+Iter: 20 prev loss: 380549.2 frac: 0.05372375 
+	Iter: 20 gnorm: 230415779362 
+TIME_SL: 11.56 0.01 11.571 0 0 
+TIME_SS: 2.18 0 2.18 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 3239586 
+Iter: 2 prev loss: 347128.8 frac: -0.001601959 
+	Iter: 2 gnorm: 4028030900 
+Iter: 3 prev loss: 494621.6 frac: -0.4248937 
+	Iter: 3 gnorm: 811815351912 
+Iter: 4 prev loss: 3634392 frac: -6.347823 
+	Iter: 4 gnorm: 1802881378909 
+Iter: 5 prev loss: 894992.3 frac: 0.7537436 
+	Iter: 5 gnorm: 1614750109652 
+Iter: 6 prev loss: 2539324 frac: -1.837257 
+	Iter: 6 gnorm: 1804799853920 
+Iter: 7 prev loss: 543047.6 frac: 0.7861448 
+	Iter: 7 gnorm: 988879666409 
+Iter: 8 prev loss: 1440930 frac: -1.653414 
+	Iter: 8 gnorm: 1784757623673 
+Iter: 9 prev loss: 828168 frac: 0.4252545 
+	Iter: 9 gnorm: 1552636521492 
+Iter: 10 prev loss: 1062830 frac: -0.2833503 
+	Iter: 10 gnorm: 1705529744510 
+Iter: 11 prev loss: 732172 frac: 0.3111107 
+	Iter: 11 gnorm: 1428636235363 
+Iter: 12 prev loss: 783813.4 frac: -0.07053175 
+	Iter: 12 gnorm: 1494965858479 
+Iter: 13 prev loss: 653253.9 frac: 0.1665696 
+	Iter: 13 gnorm: 1284275653445 
+Iter: 14 prev loss: 612590.4 frac: 0.06224763 
+	Iter: 14 gnorm: 1186000333782 
+Iter: 15 prev loss: 552312.4 frac: 0.09839849 
+	Iter: 15 gnorm: 1019021733290 
+Iter: 16 prev loss: 506342.7 frac: 0.08323136 
+	Iter: 16 gnorm: 855512708083 
+Iter: 17 prev loss: 464678.2 frac: 0.08228514 
+	Iter: 17 gnorm: 683897997640 
+Iter: 18 prev loss: 430546.5 frac: 0.07345229 
+	Iter: 18 gnorm: 517103750638 
+Iter: 19 prev loss: 402154.4 frac: 0.06594431 
+	Iter: 19 gnorm: 361989054711 
+Iter: 20 prev loss: 380549.2 frac: 0.05372375 
+	Iter: 20 gnorm: 230415779356 
+TIME_FL: 11.38 0.01 11.39 0 0 
+TIME_FS: 1.95 0 1.954 0 0 
+GEN_DATA: 500000 10000 4 40 
+TIME_J: 3.04 0 3.045 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 22286743 
+Iter: 2 prev loss: 353729.1 frac: -0.02064657 
+	Iter: 2 gnorm: 93842123557 
+Iter: 3 prev loss: 2713810 frac: -6.672001 
+	Iter: 3 gnorm: 3339054291884 
+Iter: 4 prev loss: 8370656 frac: -2.084466 
+	Iter: 4 gnorm: 3293557835334 
+Iter: 5 prev loss: 362151.7 frac: 0.9567356 
+	Iter: 5 gnorm: 200830950399 
+Iter: 6 prev loss: 1512910 frac: -3.177558 
+	Iter: 6 gnorm: 3309872717223 
+Iter: 7 prev loss: 4010131 frac: -1.650608 
+	Iter: 7 gnorm: 3302277523856 
+Iter: 8 prev loss: 742426.1 frac: 0.8148624 
+	Iter: 8 gnorm: 2653693457403 
+Iter: 9 prev loss: 2992782 frac: -3.031084 
+	Iter: 9 gnorm: 3304232712858 
+Iter: 10 prev loss: 715673.1 frac: 0.760867 
+	Iter: 10 gnorm: 2576062077614 
+Iter: 11 prev loss: 2238895 frac: -2.128376 
+	Iter: 11 gnorm: 3304154278105 
+Iter: 12 prev loss: 793428.2 frac: 0.6456161 
+	Iter: 12 gnorm: 2780571760114 
+Iter: 13 prev loss: 1761227 frac: -1.219768 
+	Iter: 13 gnorm: 3295440421606 
+Iter: 14 prev loss: 804833.3 frac: 0.5430269 
+	Iter: 14 gnorm: 2805579427693 
+Iter: 15 prev loss: 1398940 frac: -0.7381734 
+	Iter: 15 gnorm: 3258993297465 
+Iter: 16 prev loss: 816741 frac: 0.4161715 
+	Iter: 16 gnorm: 2830501849054 
+Iter: 17 prev loss: 1126195 frac: -0.3788889 
+	Iter: 17 gnorm: 3163144528937 
+Iter: 18 prev loss: 807812.1 frac: 0.2827068 
+	Iter: 18 gnorm: 2811925570100 
+Iter: 19 prev loss: 924937.4 frac: -0.1449908 
+	Iter: 19 gnorm: 2983545130000 
+Iter: 20 prev loss: 770368.1 frac: 0.1671132 
+	Iter: 20 gnorm: 2726391990554 
+TIME_SL: 16.5 0.99 17.491 0 0 
+TIME_SS: 2.52 0.08 2.606 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 22286743 
+Iter: 2 prev loss: 353729.1 frac: -0.02064657 
+	Iter: 2 gnorm: 93842123557 
+Iter: 3 prev loss: 2713810 frac: -6.672001 
+	Iter: 3 gnorm: 3339054291856 
+Iter: 4 prev loss: 8370656 frac: -2.084466 
+	Iter: 4 gnorm: 3293557835318 
+Iter: 5 prev loss: 362151.7 frac: 0.9567356 
+	Iter: 5 gnorm: 200830950346 
+Iter: 6 prev loss: 1512910 frac: -3.177558 
+	Iter: 6 gnorm: 3309872717141 
+Iter: 7 prev loss: 4010131 frac: -1.650608 
+	Iter: 7 gnorm: 3302277523863 
+Iter: 8 prev loss: 742426.1 frac: 0.8148624 
+	Iter: 8 gnorm: 2653693457085 
+Iter: 9 prev loss: 2992782 frac: -3.031084 
+	Iter: 9 gnorm: 3304232712827 
+Iter: 10 prev loss: 715673.1 frac: 0.760867 
+	Iter: 10 gnorm: 2576062077846 
+Iter: 11 prev loss: 2238895 frac: -2.128376 
+	Iter: 11 gnorm: 3304154278125 
+Iter: 12 prev loss: 793428.2 frac: 0.6456161 
+	Iter: 12 gnorm: 2780571760001 
+Iter: 13 prev loss: 1761227 frac: -1.219768 
+	Iter: 13 gnorm: 3295440421630 
+Iter: 14 prev loss: 804833.3 frac: 0.5430269 
+	Iter: 14 gnorm: 2805579427720 
+Iter: 15 prev loss: 1398940 frac: -0.7381734 
+	Iter: 15 gnorm: 3258993297452 
+Iter: 16 prev loss: 816741 frac: 0.4161715 
+	Iter: 16 gnorm: 2830501849093 
+Iter: 17 prev loss: 1126195 frac: -0.3788889 
+	Iter: 17 gnorm: 3163144528890 
+Iter: 18 prev loss: 807812.1 frac: 0.2827068 
+	Iter: 18 gnorm: 2811925570100 
+Iter: 19 prev loss: 924937.4 frac: -0.1449908 
+	Iter: 19 gnorm: 2983545130086 
+Iter: 20 prev loss: 770368.1 frac: 0.1671132 
+	Iter: 20 gnorm: 2726391990601 
+TIME_FL: 11.89 0.41 12.303 0 0 
+TIME_FS: 1.97 0 1.965 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 22286743 
+Iter: 2 prev loss: 353729.1 frac: -0.02064657 
+	Iter: 2 gnorm: 93842123557 
+Iter: 3 prev loss: 2713810 frac: -6.672001 
+	Iter: 3 gnorm: 3339054291884 
+Iter: 4 prev loss: 8370656 frac: -2.084466 
+	Iter: 4 gnorm: 3293557835334 
+Iter: 5 prev loss: 362151.7 frac: 0.9567356 
+	Iter: 5 gnorm: 200830950399 
+Iter: 6 prev loss: 1512910 frac: -3.177558 
+	Iter: 6 gnorm: 3309872717223 
+Iter: 7 prev loss: 4010131 frac: -1.650608 
+	Iter: 7 gnorm: 3302277523856 
+Iter: 8 prev loss: 742426.1 frac: 0.8148624 
+	Iter: 8 gnorm: 2653693457403 
+Iter: 9 prev loss: 2992782 frac: -3.031084 
+	Iter: 9 gnorm: 3304232712858 
+Iter: 10 prev loss: 715673.1 frac: 0.760867 
+	Iter: 10 gnorm: 2576062077614 
+Iter: 11 prev loss: 2238895 frac: -2.128376 
+	Iter: 11 gnorm: 3304154278105 
+Iter: 12 prev loss: 793428.2 frac: 0.6456161 
+	Iter: 12 gnorm: 2780571760114 
+Iter: 13 prev loss: 1761227 frac: -1.219768 
+	Iter: 13 gnorm: 3295440421606 
+Iter: 14 prev loss: 804833.3 frac: 0.5430269 
+	Iter: 14 gnorm: 2805579427693 
+Iter: 15 prev loss: 1398940 frac: -0.7381734 
+	Iter: 15 gnorm: 3258993297465 
+Iter: 16 prev loss: 816741 frac: 0.4161715 
+	Iter: 16 gnorm: 2830501849054 
+Iter: 17 prev loss: 1126195 frac: -0.3788889 
+	Iter: 17 gnorm: 3163144528937 
+Iter: 18 prev loss: 807812.1 frac: 0.2827068 
+	Iter: 18 gnorm: 2811925570100 
+Iter: 19 prev loss: 924937.4 frac: -0.1449908 
+	Iter: 19 gnorm: 2983545130000 
+Iter: 20 prev loss: 770368.1 frac: 0.1671132 
+	Iter: 20 gnorm: 2726391990554 
+TIME_SL: 16.7 0.84 17.541 0 0 
+TIME_SS: 2.59 0.02 2.608 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 22286743 
+Iter: 2 prev loss: 353729.1 frac: -0.02064657 
+	Iter: 2 gnorm: 93842123557 
+Iter: 3 prev loss: 2713810 frac: -6.672001 
+	Iter: 3 gnorm: 3339054291856 
+Iter: 4 prev loss: 8370656 frac: -2.084466 
+	Iter: 4 gnorm: 3293557835318 
+Iter: 5 prev loss: 362151.7 frac: 0.9567356 
+	Iter: 5 gnorm: 200830950346 
+Iter: 6 prev loss: 1512910 frac: -3.177558 
+	Iter: 6 gnorm: 3309872717141 
+Iter: 7 prev loss: 4010131 frac: -1.650608 
+	Iter: 7 gnorm: 3302277523863 
+Iter: 8 prev loss: 742426.1 frac: 0.8148624 
+	Iter: 8 gnorm: 2653693457085 
+Iter: 9 prev loss: 2992782 frac: -3.031084 
+	Iter: 9 gnorm: 3304232712827 
+Iter: 10 prev loss: 715673.1 frac: 0.760867 
+	Iter: 10 gnorm: 2576062077846 
+Iter: 11 prev loss: 2238895 frac: -2.128376 
+	Iter: 11 gnorm: 3304154278125 
+Iter: 12 prev loss: 793428.2 frac: 0.6456161 
+	Iter: 12 gnorm: 2780571760001 
+Iter: 13 prev loss: 1761227 frac: -1.219768 
+	Iter: 13 gnorm: 3295440421630 
+Iter: 14 prev loss: 804833.3 frac: 0.5430269 
+	Iter: 14 gnorm: 2805579427720 
+Iter: 15 prev loss: 1398940 frac: -0.7381734 
+	Iter: 15 gnorm: 3258993297452 
+Iter: 16 prev loss: 816741 frac: 0.4161715 
+	Iter: 16 gnorm: 2830501849093 
+Iter: 17 prev loss: 1126195 frac: -0.3788889 
+	Iter: 17 gnorm: 3163144528890 
+Iter: 18 prev loss: 807812.1 frac: 0.2827068 
+	Iter: 18 gnorm: 2811925570100 
+Iter: 19 prev loss: 924937.4 frac: -0.1449908 
+	Iter: 19 gnorm: 2983545130086 
+Iter: 20 prev loss: 770368.1 frac: 0.1671132 
+	Iter: 20 gnorm: 2726391990601 
+TIME_FL: 11.67 0.01 11.68 0 0 
+TIME_FS: 1.96 0 1.962 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 22286743 
+Iter: 2 prev loss: 353729.1 frac: -0.02064657 
+	Iter: 2 gnorm: 93842123557 
+Iter: 3 prev loss: 2713810 frac: -6.672001 
+	Iter: 3 gnorm: 3339054291884 
+Iter: 4 prev loss: 8370656 frac: -2.084466 
+	Iter: 4 gnorm: 3293557835334 
+Iter: 5 prev loss: 362151.7 frac: 0.9567356 
+	Iter: 5 gnorm: 200830950399 
+Iter: 6 prev loss: 1512910 frac: -3.177558 
+	Iter: 6 gnorm: 3309872717223 
+Iter: 7 prev loss: 4010131 frac: -1.650608 
+	Iter: 7 gnorm: 3302277523856 
+Iter: 8 prev loss: 742426.1 frac: 0.8148624 
+	Iter: 8 gnorm: 2653693457403 
+Iter: 9 prev loss: 2992782 frac: -3.031084 
+	Iter: 9 gnorm: 3304232712858 
+Iter: 10 prev loss: 715673.1 frac: 0.760867 
+	Iter: 10 gnorm: 2576062077614 
+Iter: 11 prev loss: 2238895 frac: -2.128376 
+	Iter: 11 gnorm: 3304154278105 
+Iter: 12 prev loss: 793428.2 frac: 0.6456161 
+	Iter: 12 gnorm: 2780571760114 
+Iter: 13 prev loss: 1761227 frac: -1.219768 
+	Iter: 13 gnorm: 3295440421606 
+Iter: 14 prev loss: 804833.3 frac: 0.5430269 
+	Iter: 14 gnorm: 2805579427693 
+Iter: 15 prev loss: 1398940 frac: -0.7381734 
+	Iter: 15 gnorm: 3258993297465 
+Iter: 16 prev loss: 816741 frac: 0.4161715 
+	Iter: 16 gnorm: 2830501849054 
+Iter: 17 prev loss: 1126195 frac: -0.3788889 
+	Iter: 17 gnorm: 3163144528937 
+Iter: 18 prev loss: 807812.1 frac: 0.2827068 
+	Iter: 18 gnorm: 2811925570100 
+Iter: 19 prev loss: 924937.4 frac: -0.1449908 
+	Iter: 19 gnorm: 2983545130000 
+Iter: 20 prev loss: 770368.1 frac: 0.1671132 
+	Iter: 20 gnorm: 2726391990554 
+TIME_SL: 16.89 0.95 17.834 0 0 
+TIME_SS: 2.55 0.05 2.603 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 22286743 
+Iter: 2 prev loss: 353729.1 frac: -0.02064657 
+	Iter: 2 gnorm: 93842123557 
+Iter: 3 prev loss: 2713810 frac: -6.672001 
+	Iter: 3 gnorm: 3339054291856 
+Iter: 4 prev loss: 8370656 frac: -2.084466 
+	Iter: 4 gnorm: 3293557835318 
+Iter: 5 prev loss: 362151.7 frac: 0.9567356 
+	Iter: 5 gnorm: 200830950346 
+Iter: 6 prev loss: 1512910 frac: -3.177558 
+	Iter: 6 gnorm: 3309872717141 
+Iter: 7 prev loss: 4010131 frac: -1.650608 
+	Iter: 7 gnorm: 3302277523863 
+Iter: 8 prev loss: 742426.1 frac: 0.8148624 
+	Iter: 8 gnorm: 2653693457085 
+Iter: 9 prev loss: 2992782 frac: -3.031084 
+	Iter: 9 gnorm: 3304232712827 
+Iter: 10 prev loss: 715673.1 frac: 0.760867 
+	Iter: 10 gnorm: 2576062077846 
+Iter: 11 prev loss: 2238895 frac: -2.128376 
+	Iter: 11 gnorm: 3304154278125 
+Iter: 12 prev loss: 793428.2 frac: 0.6456161 
+	Iter: 12 gnorm: 2780571760001 
+Iter: 13 prev loss: 1761227 frac: -1.219768 
+	Iter: 13 gnorm: 3295440421630 
+Iter: 14 prev loss: 804833.3 frac: 0.5430269 
+	Iter: 14 gnorm: 2805579427720 
+Iter: 15 prev loss: 1398940 frac: -0.7381734 
+	Iter: 15 gnorm: 3258993297452 
+Iter: 16 prev loss: 816741 frac: 0.4161715 
+	Iter: 16 gnorm: 2830501849093 
+Iter: 17 prev loss: 1126195 frac: -0.3788889 
+	Iter: 17 gnorm: 3163144528890 
+Iter: 18 prev loss: 807812.1 frac: 0.2827068 
+	Iter: 18 gnorm: 2811925570100 
+Iter: 19 prev loss: 924937.4 frac: -0.1449908 
+	Iter: 19 gnorm: 2983545130086 
+Iter: 20 prev loss: 770368.1 frac: 0.1671132 
+	Iter: 20 gnorm: 2726391990601 
+TIME_FL: 11.86 0.44 12.305 0 0 
+TIME_FS: 1.96 0 1.962 0 0 
+GEN_DATA: 500000 10000 4 200 
+TIME_J: 5.88 0 5.884 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 568719.4 
+Iter: 2 prev loss: 347444.8 frac: -0.002513646 
+	Iter: 2 gnorm: 53663945980 
+Iter: 3 prev loss: 4520037 frac: -12.00937 
+	Iter: 3 gnorm: 15424383786799 
+Iter: 4 prev loss: 46819682 frac: -9.358252 
+	Iter: 4 gnorm: 15327937045680 
+Iter: 5 prev loss: 8451939 frac: 0.8194789 
+	Iter: 5 gnorm: 15404672530515 
+Iter: 6 prev loss: 22364353 frac: -1.646062 
+	Iter: 6 gnorm: 15388696023099 
+Iter: 7 prev loss: 3302872 frac: 0.8523153 
+	Iter: 7 gnorm: 15414858261671 
+Iter: 8 prev loss: 18718625 frac: -4.667379 
+	Iter: 8 gnorm: 15395987478334 
+Iter: 9 prev loss: 593092.7 frac: 0.9683154 
+	Iter: 9 gnorm: 9669515442522 
+Iter: 10 prev loss: 13029591 frac: -20.9689 
+	Iter: 10 gnorm: 15407365546885 
+Iter: 11 prev loss: 2384230 frac: 0.8170142 
+	Iter: 11 gnorm: 15412369299115 
+Iter: 12 prev loss: 11631132 frac: -3.87836 
+	Iter: 12 gnorm: 15410162464499 
+Iter: 13 prev loss: 1219307 frac: 0.8951687 
+	Iter: 13 gnorm: 14949689186345 
+Iter: 14 prev loss: 10464809 frac: -7.582588 
+	Iter: 14 gnorm: 15412495111174 
+Iter: 15 prev loss: 600773.7 frac: 0.942591 
+	Iter: 15 gnorm: 9843550674923 
+Iter: 16 prev loss: 7667104 frac: -11.76205 
+	Iter: 16 gnorm: 15418090521635 
+Iter: 17 prev loss: 1971393 frac: 0.7428764 
+	Iter: 17 gnorm: 15394477139070 
+Iter: 18 prev loss: 7093304 frac: -2.598117 
+	Iter: 18 gnorm: 15419238121662 
+Iter: 19 prev loss: 1475980 frac: 0.7919192 
+	Iter: 19 gnorm: 15250523979218 
+Iter: 20 prev loss: 6597920 frac: -3.470196 
+	Iter: 20 gnorm: 15420228888418 
+TIME_SL: 58.56 8.09 66.652 0 0 
+TIME_SS: 5.58 0.34 5.92 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 568719.4 
+Iter: 2 prev loss: 347444.8 frac: -0.002513646 
+	Iter: 2 gnorm: 53663945981 
+Iter: 3 prev loss: 4520037 frac: -12.00937 
+	Iter: 3 gnorm: 15424383786880 
+Iter: 4 prev loss: 46819682 frac: -9.358252 
+	Iter: 4 gnorm: 15327937045603 
+Iter: 5 prev loss: 8451939 frac: 0.8194789 
+	Iter: 5 gnorm: 15404672530437 
+Iter: 6 prev loss: 22364353 frac: -1.646062 
+	Iter: 6 gnorm: 15388696023022 
+Iter: 7 prev loss: 3302872 frac: 0.8523153 
+	Iter: 7 gnorm: 15414858261779 
+Iter: 8 prev loss: 18718625 frac: -4.667379 
+	Iter: 8 gnorm: 15395987478257 
+Iter: 9 prev loss: 593092.7 frac: 0.9683154 
+	Iter: 9 gnorm: 9669515443957 
+Iter: 10 prev loss: 13029591 frac: -20.9689 
+	Iter: 10 gnorm: 15407365546805 
+Iter: 11 prev loss: 2384230 frac: 0.8170142 
+	Iter: 11 gnorm: 15412369299211 
+Iter: 12 prev loss: 11631132 frac: -3.87836 
+	Iter: 12 gnorm: 15410162464420 
+Iter: 13 prev loss: 1219307 frac: 0.8951687 
+	Iter: 13 gnorm: 14949689184349 
+Iter: 14 prev loss: 10464809 frac: -7.582588 
+	Iter: 14 gnorm: 15412495111096 
+Iter: 15 prev loss: 600773.7 frac: 0.942591 
+	Iter: 15 gnorm: 9843550669654 
+Iter: 16 prev loss: 7667104 frac: -11.76205 
+	Iter: 16 gnorm: 15418090521559 
+Iter: 17 prev loss: 1971393 frac: 0.7428764 
+	Iter: 17 gnorm: 15394477139363 
+Iter: 18 prev loss: 7093304 frac: -2.598117 
+	Iter: 18 gnorm: 15419238121560 
+Iter: 19 prev loss: 1475980 frac: 0.7919192 
+	Iter: 19 gnorm: 15250523980391 
+Iter: 20 prev loss: 6597920 frac: -3.470196 
+	Iter: 20 gnorm: 15420228888278 
+TIME_FL: 14.54 0.37 14.915 0 0 
+TIME_FS: 2.21 0 2.21 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 568719.4 
+Iter: 2 prev loss: 347444.8 frac: -0.002513646 
+	Iter: 2 gnorm: 53663945980 
+Iter: 3 prev loss: 4520037 frac: -12.00937 
+	Iter: 3 gnorm: 15424383786799 
+Iter: 4 prev loss: 46819682 frac: -9.358252 
+	Iter: 4 gnorm: 15327937045680 
+Iter: 5 prev loss: 8451939 frac: 0.8194789 
+	Iter: 5 gnorm: 15404672530515 
+Iter: 6 prev loss: 22364353 frac: -1.646062 
+	Iter: 6 gnorm: 15388696023099 
+Iter: 7 prev loss: 3302872 frac: 0.8523153 
+	Iter: 7 gnorm: 15414858261671 
+Iter: 8 prev loss: 18718625 frac: -4.667379 
+	Iter: 8 gnorm: 15395987478334 
+Iter: 9 prev loss: 593092.7 frac: 0.9683154 
+	Iter: 9 gnorm: 9669515442522 
+Iter: 10 prev loss: 13029591 frac: -20.9689 
+	Iter: 10 gnorm: 15407365546885 
+Iter: 11 prev loss: 2384230 frac: 0.8170142 
+	Iter: 11 gnorm: 15412369299115 
+Iter: 12 prev loss: 11631132 frac: -3.87836 
+	Iter: 12 gnorm: 15410162464499 
+Iter: 13 prev loss: 1219307 frac: 0.8951687 
+	Iter: 13 gnorm: 14949689186345 
+Iter: 14 prev loss: 10464809 frac: -7.582588 
+	Iter: 14 gnorm: 15412495111174 
+Iter: 15 prev loss: 600773.7 frac: 0.942591 
+	Iter: 15 gnorm: 9843550674923 
+Iter: 16 prev loss: 7667104 frac: -11.76205 
+	Iter: 16 gnorm: 15418090521635 
+Iter: 17 prev loss: 1971393 frac: 0.7428764 
+	Iter: 17 gnorm: 15394477139070 
+Iter: 18 prev loss: 7093304 frac: -2.598117 
+	Iter: 18 gnorm: 15419238121662 
+Iter: 19 prev loss: 1475980 frac: 0.7919192 
+	Iter: 19 gnorm: 15250523979218 
+Iter: 20 prev loss: 6597920 frac: -3.470196 
+	Iter: 20 gnorm: 15420228888418 
+TIME_SL: 58.26 8.1 66.363 0 0 
+TIME_SS: 5.82 0.76 6.583 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 568719.4 
+Iter: 2 prev loss: 347444.8 frac: -0.002513646 
+	Iter: 2 gnorm: 53663945981 
+Iter: 3 prev loss: 4520037 frac: -12.00937 
+	Iter: 3 gnorm: 15424383786880 
+Iter: 4 prev loss: 46819682 frac: -9.358252 
+	Iter: 4 gnorm: 15327937045603 
+Iter: 5 prev loss: 8451939 frac: 0.8194789 
+	Iter: 5 gnorm: 15404672530437 
+Iter: 6 prev loss: 22364353 frac: -1.646062 
+	Iter: 6 gnorm: 15388696023022 
+Iter: 7 prev loss: 3302872 frac: 0.8523153 
+	Iter: 7 gnorm: 15414858261779 
+Iter: 8 prev loss: 18718625 frac: -4.667379 
+	Iter: 8 gnorm: 15395987478257 
+Iter: 9 prev loss: 593092.7 frac: 0.9683154 
+	Iter: 9 gnorm: 9669515443957 
+Iter: 10 prev loss: 13029591 frac: -20.9689 
+	Iter: 10 gnorm: 15407365546805 
+Iter: 11 prev loss: 2384230 frac: 0.8170142 
+	Iter: 11 gnorm: 15412369299211 
+Iter: 12 prev loss: 11631132 frac: -3.87836 
+	Iter: 12 gnorm: 15410162464420 
+Iter: 13 prev loss: 1219307 frac: 0.8951687 
+	Iter: 13 gnorm: 14949689184349 
+Iter: 14 prev loss: 10464809 frac: -7.582588 
+	Iter: 14 gnorm: 15412495111096 
+Iter: 15 prev loss: 600773.7 frac: 0.942591 
+	Iter: 15 gnorm: 9843550669654 
+Iter: 16 prev loss: 7667104 frac: -11.76205 
+	Iter: 16 gnorm: 15418090521559 
+Iter: 17 prev loss: 1971393 frac: 0.7428764 
+	Iter: 17 gnorm: 15394477139363 
+Iter: 18 prev loss: 7093304 frac: -2.598117 
+	Iter: 18 gnorm: 15419238121560 
+Iter: 19 prev loss: 1475980 frac: 0.7919192 
+	Iter: 19 gnorm: 15250523980391 
+Iter: 20 prev loss: 6597920 frac: -3.470196 
+	Iter: 20 gnorm: 15420228888278 
+TIME_FL: 14.56 0 14.555 0 0 
+TIME_FS: 2.02 0 2.019 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 568719.4 
+Iter: 2 prev loss: 347444.8 frac: -0.002513646 
+	Iter: 2 gnorm: 53663945980 
+Iter: 3 prev loss: 4520037 frac: -12.00937 
+	Iter: 3 gnorm: 15424383786799 
+Iter: 4 prev loss: 46819682 frac: -9.358252 
+	Iter: 4 gnorm: 15327937045680 
+Iter: 5 prev loss: 8451939 frac: 0.8194789 
+	Iter: 5 gnorm: 15404672530515 
+Iter: 6 prev loss: 22364353 frac: -1.646062 
+	Iter: 6 gnorm: 15388696023099 
+Iter: 7 prev loss: 3302872 frac: 0.8523153 
+	Iter: 7 gnorm: 15414858261671 
+Iter: 8 prev loss: 18718625 frac: -4.667379 
+	Iter: 8 gnorm: 15395987478334 
+Iter: 9 prev loss: 593092.7 frac: 0.9683154 
+	Iter: 9 gnorm: 9669515442522 
+Iter: 10 prev loss: 13029591 frac: -20.9689 
+	Iter: 10 gnorm: 15407365546885 
+Iter: 11 prev loss: 2384230 frac: 0.8170142 
+	Iter: 11 gnorm: 15412369299115 
+Iter: 12 prev loss: 11631132 frac: -3.87836 
+	Iter: 12 gnorm: 15410162464499 
+Iter: 13 prev loss: 1219307 frac: 0.8951687 
+	Iter: 13 gnorm: 14949689186345 
+Iter: 14 prev loss: 10464809 frac: -7.582588 
+	Iter: 14 gnorm: 15412495111174 
+Iter: 15 prev loss: 600773.7 frac: 0.942591 
+	Iter: 15 gnorm: 9843550674923 
+Iter: 16 prev loss: 7667104 frac: -11.76205 
+	Iter: 16 gnorm: 15418090521635 
+Iter: 17 prev loss: 1971393 frac: 0.7428764 
+	Iter: 17 gnorm: 15394477139070 
+Iter: 18 prev loss: 7093304 frac: -2.598117 
+	Iter: 18 gnorm: 15419238121662 
+Iter: 19 prev loss: 1475980 frac: 0.7919192 
+	Iter: 19 gnorm: 15250523979218 
+Iter: 20 prev loss: 6597920 frac: -3.470196 
+	Iter: 20 gnorm: 15420228888418 
+TIME_SL: 58.72 8.64 67.364 0 0 
+TIME_SS: 5.91 0.43 6.34 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 568719.4 
+Iter: 2 prev loss: 347444.8 frac: -0.002513646 
+	Iter: 2 gnorm: 53663945981 
+Iter: 3 prev loss: 4520037 frac: -12.00937 
+	Iter: 3 gnorm: 15424383786880 
+Iter: 4 prev loss: 46819682 frac: -9.358252 
+	Iter: 4 gnorm: 15327937045603 
+Iter: 5 prev loss: 8451939 frac: 0.8194789 
+	Iter: 5 gnorm: 15404672530437 
+Iter: 6 prev loss: 22364353 frac: -1.646062 
+	Iter: 6 gnorm: 15388696023022 
+Iter: 7 prev loss: 3302872 frac: 0.8523153 
+	Iter: 7 gnorm: 15414858261779 
+Iter: 8 prev loss: 18718625 frac: -4.667379 
+	Iter: 8 gnorm: 15395987478257 
+Iter: 9 prev loss: 593092.7 frac: 0.9683154 
+	Iter: 9 gnorm: 9669515443957 
+Iter: 10 prev loss: 13029591 frac: -20.9689 
+	Iter: 10 gnorm: 15407365546805 
+Iter: 11 prev loss: 2384230 frac: 0.8170142 
+	Iter: 11 gnorm: 15412369299211 
+Iter: 12 prev loss: 11631132 frac: -3.87836 
+	Iter: 12 gnorm: 15410162464420 
+Iter: 13 prev loss: 1219307 frac: 0.8951687 
+	Iter: 13 gnorm: 14949689184349 
+Iter: 14 prev loss: 10464809 frac: -7.582588 
+	Iter: 14 gnorm: 15412495111096 
+Iter: 15 prev loss: 600773.7 frac: 0.942591 
+	Iter: 15 gnorm: 9843550669654 
+Iter: 16 prev loss: 7667104 frac: -11.76205 
+	Iter: 16 gnorm: 15418090521559 
+Iter: 17 prev loss: 1971393 frac: 0.7428764 
+	Iter: 17 gnorm: 15394477139363 
+Iter: 18 prev loss: 7093304 frac: -2.598117 
+	Iter: 18 gnorm: 15419238121560 
+Iter: 19 prev loss: 1475980 frac: 0.7919192 
+	Iter: 19 gnorm: 15250523980391 
+Iter: 20 prev loss: 6597920 frac: -3.470196 
+	Iter: 20 gnorm: 15420228888278 
+TIME_FL: 14.75 0.01 14.764 0 0 
+TIME_FS: 2.02 0 2.023 0 0 
+GEN_DATA: 500000 10000 4 400 
+TIME_J: 10.36 0.69 11.056 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 23953.16 
+Iter: 2 prev loss: 346646.5 frac: -0.0002104563 
+	Iter: 2 gnorm: 8912397564 
+Iter: 3 prev loss: 2600522 frac: -6.501942 
+	Iter: 3 gnorm: 30545299331249 
+Iter: 4 prev loss: 99065202 frac: -37.09435 
+	Iter: 4 gnorm: 30352658679672 
+Iter: 5 prev loss: 23088703 frac: 0.7669343 
+	Iter: 5 gnorm: 30504611677187 
+Iter: 6 prev loss: 37936494 frac: -0.643076 
+	Iter: 6 gnorm: 30478337976476 
+Iter: 7 prev loss: 12896898 frac: 0.6600398 
+	Iter: 7 gnorm: 30524995287922 
+Iter: 8 prev loss: 30712205 frac: -1.381364 
+	Iter: 8 gnorm: 30492786554907 
+Iter: 9 prev loss: 7425380 frac: 0.7582271 
+	Iter: 9 gnorm: 30535938324073 
+Iter: 10 prev loss: 26500769 frac: -2.568945 
+	Iter: 10 gnorm: 30501209425507 
+Iter: 11 prev loss: 4014938 frac: 0.8484973 
+	Iter: 11 gnorm: 30542746273553 
+Iter: 12 prev loss: 23746682 frac: -4.914582 
+	Iter: 12 gnorm: 30506717600680 
+Iter: 13 prev loss: 1686577 frac: 0.9289763 
+	Iter: 13 gnorm: 30403860152142 
+Iter: 14 prev loss: 21751464 frac: -11.89681 
+	Iter: 14 gnorm: 30510708036724 
+Iter: 15 prev loss: 349036.3 frac: 0.9839534 
+	Iter: 15 gnorm: 299486607507 
+Iter: 16 prev loss: 1967107 frac: -4.635823 
+	Iter: 16 gnorm: 30503518502192 
+Iter: 17 prev loss: 17107804 frac: -7.696936 
+	Iter: 17 gnorm: 30516573476157 
+Iter: 18 prev loss: 864942.3 frac: 0.9494417 
+	Iter: 18 gnorm: 26710410903993 
+Iter: 19 prev loss: 15017993 frac: -16.363 
+	Iter: 19 gnorm: 30520753098022 
+Iter: 20 prev loss: 1057259 frac: 0.9296005 
+	Iter: 20 gnorm: 28771880695514 
+TIME_SL: 110.31 17.02 127.339 0 0 
+TIME_SS: 9.46 0.62 10.079 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 23953.16 
+Iter: 2 prev loss: 346646.5 frac: -0.0002104563 
+	Iter: 2 gnorm: 8912397564 
+Iter: 3 prev loss: 2600522 frac: -6.501942 
+	Iter: 3 gnorm: 30545299330757 
+Iter: 4 prev loss: 99065202 frac: -37.09435 
+	Iter: 4 gnorm: 30352658679518 
+Iter: 5 prev loss: 23088703 frac: 0.7669343 
+	Iter: 5 gnorm: 30504611677032 
+Iter: 6 prev loss: 37936494 frac: -0.643076 
+	Iter: 6 gnorm: 30478337976319 
+Iter: 7 prev loss: 12896898 frac: 0.6600398 
+	Iter: 7 gnorm: 30524995287768 
+Iter: 8 prev loss: 30712205 frac: -1.381364 
+	Iter: 8 gnorm: 30492786554750 
+Iter: 9 prev loss: 7425380 frac: 0.7582271 
+	Iter: 9 gnorm: 30535938323905 
+Iter: 10 prev loss: 26500769 frac: -2.568945 
+	Iter: 10 gnorm: 30501209425350 
+Iter: 11 prev loss: 4014938 frac: 0.8484973 
+	Iter: 11 gnorm: 30542746273952 
+Iter: 12 prev loss: 23746682 frac: -4.914582 
+	Iter: 12 gnorm: 30506717600523 
+Iter: 13 prev loss: 1686577 frac: 0.9289763 
+	Iter: 13 gnorm: 30403860151411 
+Iter: 14 prev loss: 21751464 frac: -11.89681 
+	Iter: 14 gnorm: 30510708036567 
+Iter: 15 prev loss: 349036.3 frac: 0.9839534 
+	Iter: 15 gnorm: 299486600284 
+Iter: 16 prev loss: 1967107 frac: -4.635823 
+	Iter: 16 gnorm: 30503518498182 
+Iter: 17 prev loss: 17107804 frac: -7.696936 
+	Iter: 17 gnorm: 30516573475956 
+Iter: 18 prev loss: 864942.3 frac: 0.9494417 
+	Iter: 18 gnorm: 26710410580601 
+Iter: 19 prev loss: 15017993 frac: -16.363 
+	Iter: 19 gnorm: 30520753098014 
+Iter: 20 prev loss: 1057259 frac: 0.9296005 
+	Iter: 20 gnorm: 28771881204056 
+TIME_FL: 17.98 0.5 18.479 0 0 
+TIME_FS: 2.1 0 2.101 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 23953.16 
+Iter: 2 prev loss: 346646.5 frac: -0.0002104563 
+	Iter: 2 gnorm: 8912397564 
+Iter: 3 prev loss: 2600522 frac: -6.501942 
+	Iter: 3 gnorm: 30545299331249 
+Iter: 4 prev loss: 99065202 frac: -37.09435 
+	Iter: 4 gnorm: 30352658679672 
+Iter: 5 prev loss: 23088703 frac: 0.7669343 
+	Iter: 5 gnorm: 30504611677187 
+Iter: 6 prev loss: 37936494 frac: -0.643076 
+	Iter: 6 gnorm: 30478337976476 
+Iter: 7 prev loss: 12896898 frac: 0.6600398 
+	Iter: 7 gnorm: 30524995287922 
+Iter: 8 prev loss: 30712205 frac: -1.381364 
+	Iter: 8 gnorm: 30492786554907 
+Iter: 9 prev loss: 7425380 frac: 0.7582271 
+	Iter: 9 gnorm: 30535938324073 
+Iter: 10 prev loss: 26500769 frac: -2.568945 
+	Iter: 10 gnorm: 30501209425507 
+Iter: 11 prev loss: 4014938 frac: 0.8484973 
+	Iter: 11 gnorm: 30542746273553 
+Iter: 12 prev loss: 23746682 frac: -4.914582 
+	Iter: 12 gnorm: 30506717600680 
+Iter: 13 prev loss: 1686577 frac: 0.9289763 
+	Iter: 13 gnorm: 30403860152142 
+Iter: 14 prev loss: 21751464 frac: -11.89681 
+	Iter: 14 gnorm: 30510708036724 
+Iter: 15 prev loss: 349036.3 frac: 0.9839534 
+	Iter: 15 gnorm: 299486607507 
+Iter: 16 prev loss: 1967107 frac: -4.635823 
+	Iter: 16 gnorm: 30503518502192 
+Iter: 17 prev loss: 17107804 frac: -7.696936 
+	Iter: 17 gnorm: 30516573476157 
+Iter: 18 prev loss: 864942.3 frac: 0.9494417 
+	Iter: 18 gnorm: 26710410903993 
+Iter: 19 prev loss: 15017993 frac: -16.363 
+	Iter: 19 gnorm: 30520753098022 
+Iter: 20 prev loss: 1057259 frac: 0.9296005 
+	Iter: 20 gnorm: 28771880695514 
+TIME_SL: 110.03 17.08 127.115 0 0 
+TIME_SS: 9.67 0.95 10.616 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 23953.16 
+Iter: 2 prev loss: 346646.5 frac: -0.0002104563 
+	Iter: 2 gnorm: 8912397564 
+Iter: 3 prev loss: 2600522 frac: -6.501942 
+	Iter: 3 gnorm: 30545299330757 
+Iter: 4 prev loss: 99065202 frac: -37.09435 
+	Iter: 4 gnorm: 30352658679518 
+Iter: 5 prev loss: 23088703 frac: 0.7669343 
+	Iter: 5 gnorm: 30504611677032 
+Iter: 6 prev loss: 37936494 frac: -0.643076 
+	Iter: 6 gnorm: 30478337976319 
+Iter: 7 prev loss: 12896898 frac: 0.6600398 
+	Iter: 7 gnorm: 30524995287768 
+Iter: 8 prev loss: 30712205 frac: -1.381364 
+	Iter: 8 gnorm: 30492786554750 
+Iter: 9 prev loss: 7425380 frac: 0.7582271 
+	Iter: 9 gnorm: 30535938323905 
+Iter: 10 prev loss: 26500769 frac: -2.568945 
+	Iter: 10 gnorm: 30501209425350 
+Iter: 11 prev loss: 4014938 frac: 0.8484973 
+	Iter: 11 gnorm: 30542746273952 
+Iter: 12 prev loss: 23746682 frac: -4.914582 
+	Iter: 12 gnorm: 30506717600523 
+Iter: 13 prev loss: 1686577 frac: 0.9289763 
+	Iter: 13 gnorm: 30403860151411 
+Iter: 14 prev loss: 21751464 frac: -11.89681 
+	Iter: 14 gnorm: 30510708036567 
+Iter: 15 prev loss: 349036.3 frac: 0.9839534 
+	Iter: 15 gnorm: 299486600284 
+Iter: 16 prev loss: 1967107 frac: -4.635823 
+	Iter: 16 gnorm: 30503518498182 
+Iter: 17 prev loss: 17107804 frac: -7.696936 
+	Iter: 17 gnorm: 30516573475956 
+Iter: 18 prev loss: 864942.3 frac: 0.9494417 
+	Iter: 18 gnorm: 26710410580601 
+Iter: 19 prev loss: 15017993 frac: -16.363 
+	Iter: 19 gnorm: 30520753098014 
+Iter: 20 prev loss: 1057259 frac: 0.9296005 
+	Iter: 20 gnorm: 28771881204056 
+TIME_FL: 17.9 0.01 17.918 0 0 
+TIME_FS: 2.17 0 2.166 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 23953.16 
+Iter: 2 prev loss: 346646.5 frac: -0.0002104563 
+	Iter: 2 gnorm: 8912397564 
+Iter: 3 prev loss: 2600522 frac: -6.501942 
+	Iter: 3 gnorm: 30545299331249 
+Iter: 4 prev loss: 99065202 frac: -37.09435 
+	Iter: 4 gnorm: 30352658679672 
+Iter: 5 prev loss: 23088703 frac: 0.7669343 
+	Iter: 5 gnorm: 30504611677187 
+Iter: 6 prev loss: 37936494 frac: -0.643076 
+	Iter: 6 gnorm: 30478337976476 
+Iter: 7 prev loss: 12896898 frac: 0.6600398 
+	Iter: 7 gnorm: 30524995287922 
+Iter: 8 prev loss: 30712205 frac: -1.381364 
+	Iter: 8 gnorm: 30492786554907 
+Iter: 9 prev loss: 7425380 frac: 0.7582271 
+	Iter: 9 gnorm: 30535938324073 
+Iter: 10 prev loss: 26500769 frac: -2.568945 
+	Iter: 10 gnorm: 30501209425507 
+Iter: 11 prev loss: 4014938 frac: 0.8484973 
+	Iter: 11 gnorm: 30542746273553 
+Iter: 12 prev loss: 23746682 frac: -4.914582 
+	Iter: 12 gnorm: 30506717600680 
+Iter: 13 prev loss: 1686577 frac: 0.9289763 
+	Iter: 13 gnorm: 30403860152142 
+Iter: 14 prev loss: 21751464 frac: -11.89681 
+	Iter: 14 gnorm: 30510708036724 
+Iter: 15 prev loss: 349036.3 frac: 0.9839534 
+	Iter: 15 gnorm: 299486607507 
+Iter: 16 prev loss: 1967107 frac: -4.635823 
+	Iter: 16 gnorm: 30503518502192 
+Iter: 17 prev loss: 17107804 frac: -7.696936 
+	Iter: 17 gnorm: 30516573476157 
+Iter: 18 prev loss: 864942.3 frac: 0.9494417 
+	Iter: 18 gnorm: 26710410903993 
+Iter: 19 prev loss: 15017993 frac: -16.363 
+	Iter: 19 gnorm: 30520753098022 
+Iter: 20 prev loss: 1057259 frac: 0.9296005 
+	Iter: 20 gnorm: 28771880695514 
+TIME_SL: 110.51 17.02 127.531 0 0 
+TIME_SS: 9.46 0.62 10.08 0 0 
+Iter: 1 prev loss: 346573.6 frac: 0 
+	Iter: 1 gnorm: 23953.16 
+Iter: 2 prev loss: 346646.5 frac: -0.0002104563 
+	Iter: 2 gnorm: 8912397564 
+Iter: 3 prev loss: 2600522 frac: -6.501942 
+	Iter: 3 gnorm: 30545299330757 
+Iter: 4 prev loss: 99065202 frac: -37.09435 
+	Iter: 4 gnorm: 30352658679518 
+Iter: 5 prev loss: 23088703 frac: 0.7669343 
+	Iter: 5 gnorm: 30504611677032 
+Iter: 6 prev loss: 37936494 frac: -0.643076 
+	Iter: 6 gnorm: 30478337976319 
+Iter: 7 prev loss: 12896898 frac: 0.6600398 
+	Iter: 7 gnorm: 30524995287768 
+Iter: 8 prev loss: 30712205 frac: -1.381364 
+	Iter: 8 gnorm: 30492786554750 
+Iter: 9 prev loss: 7425380 frac: 0.7582271 
+	Iter: 9 gnorm: 30535938323905 
+Iter: 10 prev loss: 26500769 frac: -2.568945 
+	Iter: 10 gnorm: 30501209425350 
+Iter: 11 prev loss: 4014938 frac: 0.8484973 
+	Iter: 11 gnorm: 30542746273952 
+Iter: 12 prev loss: 23746682 frac: -4.914582 
+	Iter: 12 gnorm: 30506717600523 
+Iter: 13 prev loss: 1686577 frac: 0.9289763 
+	Iter: 13 gnorm: 30403860151411 
+Iter: 14 prev loss: 21751464 frac: -11.89681 
+	Iter: 14 gnorm: 30510708036567 
+Iter: 15 prev loss: 349036.3 frac: 0.9839534 
+	Iter: 15 gnorm: 299486600284 
+Iter: 16 prev loss: 1967107 frac: -4.635823 
+	Iter: 16 gnorm: 30503518498182 
+Iter: 17 prev loss: 17107804 frac: -7.696936 
+	Iter: 17 gnorm: 30516573475956 
+Iter: 18 prev loss: 864942.3 frac: 0.9494417 
+	Iter: 18 gnorm: 26710410580601 
+Iter: 19 prev loss: 15017993 frac: -16.363 
+	Iter: 19 gnorm: 30520753098014 
+Iter: 20 prev loss: 1057259 frac: 0.9296005 
+	Iter: 20 gnorm: 28771881204056 
+TIME_FL: 17.99 0.48 18.472 0 0 
+TIME_FS: 2.09 0 2.096 0 0 
+> 

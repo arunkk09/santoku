@@ -1,0 +1,93 @@
+Santoku 1.0 Code
+--------------------------------------------------------------------------------------
+Released under Apache License Version 2.0
+--------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------
+1. Dependencies
+--------------------------------------------------------------------------------------
+
+R version 3.0.1 and the following R packages:
+
+- data.table
+- Matrix
+- shiny
+- caret
+- bnlearn
+
+--------------------------------------------------------------------------------------
+2. Code structure and files in SantokuCode
+--------------------------------------------------------------------------------------
+
+src/
+	Classes.R
+		Class structures for KFKDs, FDs, single-table,  multi-table datasets
+		
+	LogReg/
+		LogRegDense.R
+	NBayes/
+		NBayes.R
+	TANBayes/
+		TANBayes.R
+		
+	Implementations of denormalized/factorized learning/scoring for logistic 
+	regression with batch gradient descent, naive bayes, and tree-augmented naive 
+	bayes models respectively. This is the core of Santoku's library and API.
+
+examples/
+	LogReg/
+		CannedExpediaDensetop5p.R
+		CannedFlightsDensetop5p.R
+		CannedWalmartDense10p.R
+		CannedYelpDensetop5p.R
+	NBayes/
+		CannedExpediatop5p.R
+		CannedFlightsnewtop5p.R
+		CannedWalmart25p.R		
+		CannedYelptop5p.R
+	TANBayes/
+		CannedExpediatop5p.R
+		CannedFlightsnewtop5p.R
+		CannedWalmart25p.R
+		CannedYelptop5p.R
+		
+	Sample programs to show the usage of Santoku's library and API. They compare
+	the execution of denormalized/factorized learning/scoring for all three ML 
+	models on four dense datasets: Expedia, Flights, Walmart, and Yelp.
+	To run a file, simply type "R -f CannedExpediaDensetop5p.R" on the command
+	line. The results, accuracy, and run times are printed to the screen.
+	
+shinydemo/
+	server.R
+	ui.R
+	Screenshot1_Learning.png
+	Screenshot2_FeatureExploration.png
+	
+	Code and screenshots for the Shiny-based demo of the Santoku GUI. 
+	It is executable from an RStudio console (click "Run App" on ui.R) and 
+	renders in a separate window or web browser. 
+	Allows a user to select the model, dataset, and database dependencies using 
+	GUI menus. When selecting the dataset from the drop-down menu, use the 
+	versions with the "(R)" suffix for the LogReg model alone.
+	*NOTE*: Wait for a minute when running the demo for the first time to allow 
+	it to load all the datasets in to R data frames
+
+plots/
+	LogReg/
+		datasynth.R
+		datasynth.out
+		plotsynth.py
+		*.svg
+		*.png
+	NBayes/
+		datasynth.R
+		datasynth.out
+		plotsynth.py
+		*.svg
+		*.png
+		
+	Code to generate synthetic data in R in order to demonstrate and compare the 
+	performance of denormalized/factorized learning/scoring for LogReg and 
+	NBayes for various data sizes. A sample run output is also provided; it was
+	run on my laptop. A Python script for plotting the results and the plots 
+	based on the sample run are also included.

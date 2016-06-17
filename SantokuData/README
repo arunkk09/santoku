@@ -1,0 +1,132 @@
+Santoku 1.0 Datasets
+--------------------------------------------------------------------------------------
+Disclaimer: I do not claim ownership of any of these datasets. They are sourced from 
+Kaggle (https://www.kaggle.com/) and are owned by their respective original owners
+who released them on Kaggle. The versions released by me were cleaned and reformatted 
+to make them amenable to R and Santoku.
+--------------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------------
+1. Schema of datasets in SantokuData
+--------------------------------------------------------------------------------------
+
+Expedia
+	Table S:	Listings
+	Target Y:	"position"
+	Table R1:	Hotels
+	Foreign Key 1:	"prop_idfk"
+	Table R2:	Searches
+	Foreign Key 2:	"srch_idfk" (not "closed domain"; disallowed as a feature)
+
+Flights
+	Table S:	Routes
+	Target Y:	"codeshare"
+	Table R1:	Airlines
+	Foreign Key 1:	"airlineid"
+	Table R2:	Source Airports
+	Foreign Key 2:	"sairportid"
+	Table R3:	Destination Airports
+	Foreign Key 3:	"dairportid"
+
+Walmart
+	Table S:	Sales
+	Target Y:	"weekly_sales"
+	Table R1:	Stores
+	Foreign Key 1:	"storefk"
+	Table R2:	TemporalData
+	Foreign Key 2:	"purchaseidfk"
+
+Yelp
+	Table S:	Ratings
+	Target Y:	"stars"
+	Table R1:	Users
+	Foreign Key 1:	"useridfk"
+	Table R2:	Businesses
+	Foreign Key 2:	"businessidfk"
+
+--------------------------------------------------------------------------------------
+2. Structure and files in SantokuData
+--------------------------------------------------------------------------------------
+
+Expedia
+	EHtraintest10retop5p.csv
+	EHhold10retop5p.csv
+		Learning and validation sets for denormalized version
+	EHtraintest10retop5pMultS.csv
+	EHhold10retop5pMultS.csv
+		Learning and validation set of table S for factorized version
+	hotels_disc10retop5p.csv
+		Table R1
+	searches_disc10retop5p.csv
+		Table R2
+		
+	DEHtraintest10reSingtop5p.csv
+	DEHhold10reSingtop5p.csv
+	DEHtraintest10reMultStop5p.csv
+	DEHhold10reMultStop5p.csv
+	DEHMultR1top5p.csv
+	DEHMultR2top5p.csv
+		Corresponding datasets reformatted for logistic regression
+	
+Flights
+	OFtraintestnewtop5p.csv
+	OFholdnewtop5p.csv
+		Learning and validation sets for denormalized version
+	OFtraintestnewtop5pMultS.csv
+	OFholdnewtop5pMultS.csv
+		Learning and validation set of table S for factorized version
+	airlinesc_discnewtop5p.csv
+		Table R1
+	sairportsc_discnewtop5p.csv
+		Table R2
+	dairportsc_discnewtop5p.csv
+		Table R3
+		
+	DOFtraintestnewSingtop5p.csv
+	DOFholdnewSingtop5p.csv
+	DOFtraintestnewMultStop5p.csv
+	DOFholdnewMultStop5p.csv
+	DOFMultR1top5p.csv
+	DOFMultR2top5p.csv
+	DOFMultR3top5p.csv
+		Corresponding datasets reformatted for logistic regression
+	
+Walmart
+	WTtraintest25p.csv
+	WThold25p.csv
+		Learning and validation sets for denormalized version
+	WTtraintest25pMultS.csv
+	WThold25pMultS.csv
+		Learning and validation set of table S for factorized version
+	stores_disc.csv
+		Table R1
+	features_disc25p.csv
+		Table R2
+		
+	DWTtraintestSing10p.csv
+	DWTholdSing10p.csv
+	DWTtraintestMultS10p.csv
+	DWTholdMultS10p.csv
+	DWTMultR1.csv
+	DWTMultR210p.csv
+		Corresponding datasets reformatted for logistic regression
+
+Yelp
+	YRtraintesttop5p.csv
+	YRholdtop5p.csv
+		Learning and validation sets for denormalized version
+	YRtraintesttop5pMultS.csv
+	YRholdtop5pMultS.csv
+		Learning and validation set of table S for factorized version
+	user_disc_gendtop5p.csv
+		Table R1
+	business_checkin_disctop5p.csv
+		Table R2
+		
+	DYRtraintestSingtop5p.csv
+	DYRholdSingtop5p.csv
+	DYRtraintestMultStop5p.csv
+	DYRholdMultStop5p.csv
+	DYRMultR1top5p.csv
+	DYRMultR2top5p.csv        
+		Corresponding datasets reformatted for logistic regression
